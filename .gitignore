@@ -1,0 +1,17 @@
+# Dependencies and logs
+node_modules
+*.log
+npm-debug.log*
+
+# Download cache: files are re-fetched by pinned SHA from data/sources.lock.json
+data/raw/
+
+# Build output (Phase 2 site)
+dist
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.local
