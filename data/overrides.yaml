@@ -1,0 +1,156 @@
+# Hand-maintained rules for the data pipeline. Every entry needs a reason (and a source where one exists).
+# The build fails on entries that no longer apply, so this file can't silently go stale.
+
+# Main-series forms that never appear in the dataset. Patterns match PokéAPI identifiers.
+excludeForms:
+  - pattern: "-gmax$"
+    reason: Gigantamax forms share base stats with the regular form
+  - pattern: "-totem"
+    reason: Totem forms are boss-only variants of the regular form
+  - pattern: "^pikachu-(rock-star|belle|pop-star|phd|libre|cosplay)$"
+    reason: Cosplay Pikachu shares Pikachu's stats
+  - pattern: "^pikachu-[a-z]+-cap$"
+    reason: Cap Pikachu shares Pikachu's stats
+  - pattern: "^(pikachu|eevee)-starter$"
+    reason: "Let's Go partner forms have boosted stats that exist only in those games, not in GO"
+
+# Forms kept even if the selection rules would drop them.
+includeForms: []
+
+# PvPoke speciesId -> PokéAPI identifier, for ids the automatic matching can't resolve.
+idMap:
+  # PvPoke spells these differently
+  nidoran_female: nidoran-f
+  nidoran_male: nidoran-m
+  necrozma_dawn_wings: necrozma-dawn
+  necrozma_dusk_mane: necrozma-dusk
+  gimmighoul: gimmighoul-roaming # GO only has the Roaming Form; PokéAPI's default is the Chest Form
+  zacian_hero: zacian
+  zacian_crowned_sword: zacian-crowned
+  zamazenta_hero: zamazenta
+  zamazenta_crowned_shield: zamazenta-crowned
+  calyrex_ice_rider: calyrex-ice
+  tauros_aqua: tauros-paldea-aqua-breed
+  tauros_blaze: tauros-paldea-blaze-breed
+  tauros_combat: tauros-paldea-combat-breed
+  # PvPoke names one form, PokéAPI keeps it as the species default
+  burmy_plant: burmy
+  cherrim_overcast: cherrim
+  minior_meteor: minior-red-meteor
+  minior_core: minior-red
+  # Paradox Pokémon: PvPoke drops the space
+  greattusk: great-tusk
+  screamtail: scream-tail
+  brutebonnet: brute-bonnet
+  fluttermane: flutter-mane
+  slitherwing: slither-wing
+  sandyshocks: sandy-shocks
+  roaringmoon: roaring-moon
+  irontreads: iron-treads
+  ironbundle: iron-bundle
+  ironhands: iron-hands
+  ironjugulis: iron-jugulis
+  ironmoth: iron-moth
+  ironthorns: iron-thorns
+  ironvaliant: iron-valiant
+
+# PvPoke entries left out of the join. Patterns match PvPoke speciesIds.
+ignoreGo:
+  - pattern: "^mewtwo_armored$"
+    reason: GO-only form with no main-series counterpart
+  - pattern: "^pikachu_(libre|pop_star|rock_star|5th_anniversary|flying|horizons|kariyushi|shaymin)$"
+    reason: Costume Pikachu; same GO stats as Pikachu (checked against PvPoke)
+  - pattern: "^burmy_(sandy|trash)$"
+    reason: Cloak variant; same GO stats as Plant Cloak Burmy
+  - pattern: "^cherrim_sunny$"
+    reason: Sunshine Form; same GO stats as Overcast Cherrim
+  - pattern: "^(arceus|silvally|genesect)_"
+    reason: Type or drive variant; same GO stats as the base form
+  - pattern: "^(wishiwashi_solo|toxtricity_amped|eiscue_ice|maushold_family_of_four|palafin_zero|hoopa_confined|koraidon_apex|miraidon_ultimate)$"
+    reason: PvPoke duplicate of the bare species entry (same stats), which is matched instead
+
+# Fixed GO adjustment multipliers, in whole percent. They replace the CP rule (×0.91 at ≥ 4000 CP)
+# and the Mega default (×1). Each was checked: the fixed value reproduces PvPoke's stats exactly.
+fixedAdjustment:
+  # ×0.97 Megas and Primals
+  rayquaza-mega: { percent: 97, source: "Bulbapedia, Stat (GO)" }
+  kyogre-primal: { percent: 97, source: "Bulbapedia, Stat (GO)" }
+  groudon-primal: { percent: 97, source: "Bulbapedia, Stat (GO)" }
+  mewtwo-mega-x:
+    percent: 97
+    reason: Not in Bulbapedia's ×0.97 list, but only ×0.97 reproduces GO's 399/215/228
+    source: PvPoke gamemaster
+  mewtwo-mega-y:
+    percent: 97
+    reason: Not in Bulbapedia's ×0.97 list, but only ×0.97 reproduces GO's 413/223/228
+    source: PvPoke gamemaster
+  zygarde-mega: { percent: 97, source: "Dittobase, Mega Zygarde (403/181/415, unreleased)" }
+
+  # Unreleased Gen IX Pokémon cut by ×0.91 although their uncut CP at L40 is below 4000.
+  # GO stats are datamined ahead of release (PvPoke released: false) and may change at launch.
+  walking-wake: &cutBelowLine
+    percent: 91
+    reason: "Unreleased; Niantic applied ×0.91 below the 4000 CP line"
+    source: PvPoke gamemaster
+  iron-leaves: *cutBelowLine
+  okidogi: *cutBelowLine
+  munkidori: *cutBelowLine
+  fezandipiti: *cutBelowLine
+  ogerpon: *cutBelowLine
+  gouging-fire: *cutBelowLine
+  iron-boulder: *cutBelowLine
+  iron-crown: *cutBelowLine
+  pecharunt: *cutBelowLine
+
+  # Unreleased Gen IX Pokémon left uncut although their uncut CP at L40 reaches 4000.
+  great-tusk: &uncutAboveLine
+    percent: 100
+    reason: "Unreleased; Niantic did not apply ×0.91 above the 4000 CP line"
+    source: PvPoke gamemaster
+  iron-hands: *uncutAboveLine
+  roaring-moon: *uncutAboveLine
+  palafin-hero: *uncutAboveLine
+
+# Forms whose GO stats come from a different stat era than the generation rule gives.
+basisGeneration:
+  zacian: &swshEra
+    generation: 8
+    reason: "Added to GO with their Sword/Shield stats; GO did not apply the Gen IX changes"
+    source: PvPoke gamemaster (Gen VIII stats reproduce it exactly)
+  zacian-crowned: *swshEra
+  zamazenta: *swshEra
+  zamazenta-crowned: *swshEra
+  aegislash-shield: &postNerf
+    generation: 9
+    reason: "Added to GO in 2023, after the Gen VIII Defense/Attack nerf, so GO uses current stats"
+    source: PvPoke gamemaster (current stats reproduce it exactly)
+  aegislash-blade: *postNerf
+
+# Actual GO stats that differ from the formula. `go` must equal PvPoke's stats.
+exceptions:
+  shedinja:
+    go: { atk: 153, def: 73, sta: 1 }
+    reason: "Stamina is hand-set to 1 (the formula gives 51), matching its 1 HP in the main series"
+    source: "Bulbapedia, Stat (GO); docs/research/from-six-stats-to-three-2026.md"
+  melmetal:
+    go: { atk: 226, def: 190, sta: 264 }
+    reason: "Stamina is 264, not the formula's 260; Attack and Defense match the ×0.91 cut"
+    source: PvPoke gamemaster
+  # GO rounds these exact .5 ties down. 35 of the 39 exact ties in the data round up (the rule);
+  # these four are the only ties with an Attack blend of exactly 150 (an 80/40 split).
+  togetic: &tieDown
+    go: { atk: 139, def: 181, sta: 146 }
+    reason: "Attack 150 × 0.93 = 139.5 rounds down in GO; other exact ties round up"
+    source: PvPoke gamemaster
+  mantine:
+    go: { atk: 148, def: 226, sta: 163 }
+    reason: "Attack 150 × 0.99 = 148.5 rounds down in GO; other exact ties round up"
+    source: PvPoke gamemaster
+  skarmory:
+    go: { atk: 148, def: 226, sta: 163 }
+    reason: "Attack 150 × 0.99 = 148.5 rounds down in GO; other exact ties round up"
+    source: PvPoke gamemaster
+  miltank:
+    go: { atk: 157, def: 193, sta: 216 }
+    reason: "Attack 150 × 1.05 = 157.5 rounds down in GO; other exact ties round up"
+    source: PvPoke gamemaster
