@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Fetch pinned sources
+        run: npm run fetch
+      - name: Rebuild dataset
+        run: npm run build:data
+      - name: Committed dataset and reports match a fresh build
+        run: git diff --exit-code -- public/data data/reports
+      - run: npm test
