@@ -14,7 +14,7 @@ export type AdjustmentRule =
   | { kind: "fixed"; percent: number }; // hand-set multiplier, e.g. 97 for Mega Rayquaza
 
 /** round(p / q) with .5 rounded up, for p ≥ 0 and q > 0. */
-function roundDiv(p: number, q: number): number {
+export function roundDiv(p: number, q: number): number {
   return Math.floor((2 * p + q) / (2 * q));
 }
 

@@ -2,7 +2,7 @@
 
 How the pipeline turns main-series base stats into Pokémon GO stats and metrics. Code: `src/lib/` (pure, shared with the future site). Research behind it: [`research/`](research/README.md).
 
-**Status (Phase 1):** the conversion and raw metrics are settled and validated against GO data. The headline grade is not decided yet; see [Open questions](#7-open-questions-for-phase-2).
+**Status (Phase 1):** the conversion and raw metrics are settled and validated against GO data. The headline score, GO Fit, is in [§7](#7-go-fit). What's left is in [Open questions](#8-open-questions-for-phase-2).
 
 Figures below are for the pinned sources in `data/sources.lock.json`. The current numbers are always in [`data/reports/validation.md`](../data/reports/validation.md).
 
@@ -85,7 +85,7 @@ Bulk         = round((D+15)·CPM × HP)
 - **CPM values:** L40 = 0.79030001, L50 = 0.84029999, L51 = 0.84529999. These are the game master's 8-digit values. The rounded 0.7903/0.8403 values put stat product off by 1–2; these reproduce the research's figures exactly.
 - **Per entry:** CP at L40, L50 and L51; uncapped stat product and bulk at L50.
 - **GO stats used:** the actual GO stats where they exist, otherwise the prediction (`go.status = "predicted"`).
-- **Percentile ranks** (`ranks.*Pct`, 0–100) for BST, CP at L50 and stat product at L50, computed **within a pool**:
+- **Percentile ranks** (`ranks.*Pct`, 0–100) for BST, CP at L50, stat product at L50 and GO Fit (§7), computed **within a pool**:
   - `standard`: everything except Megas and Primals,
   - `mega`: Megas and Primals.
   - Ties share the midpoint rank.
@@ -105,19 +105,68 @@ Bulk         = round((D+15)·CPM × HP)
 
 `data/reports/coverage.md` lists every dropped form, every ignored PvPoke entry, and every match that needed a rule.
 
-## 7. Open questions for Phase 2
+## 7. GO Fit
 
-- **Headline grade.** The core of the app is how much main-series strength survives into GO. Decide:
-  - which GO strength (CP at L50 or stat product at L50, or both as separate lenses),
-  - which main-series strength (current BST or the stat-era BST),
-  - delta or ratio, and grade cutoffs.
-  - Phase 1 already stores both percentile ranks to make this cheap.
+`src/lib/go-fit.ts`. The headline score: how much of its potential GO output a form's stat shape reaches. It measures shape, not strength. [Decision 0005](decisions/0005-go-fit-headline-score.md) records why each rule is the way it is.
+
+```
+GO Fit = 100 × (A + 15) × (D + 15)  ÷  the same product for the best reshape
+
+Reshape, tried for every Speed s from 1 to 255:
+  shared points  = Atk + SpA + Def + SpD + Spe − s           (HP stays as it is)
+  attack points  = shared points × (Atk + SpA) ÷ (Atk + SpA + Def + SpD), rounded
+  defense points = the rest
+  main stat      = the higher of each pair takes all it can, up to 255 (Atk or Def on a tie)
+  secondary stat = what's left, at least 1
+  convert with §1, using the form's own adjustment
+```
+
+`A` and `D` are GO Attack and Defense from the formula, using the stats from §3. This is the stat product from §5: HP and the adjustment are the same on both sides, so Stamina and CPM cancel and one score holds at every level.
+
+**The score splits exactly into three parts**, where `A1` and `D1` are GO Attack and Defense with each pair concentrated but Speed unchanged:
+
+```
+Attack Fit  = (A + 15) ÷ (A1 + 15)
+Defense Fit = (D + 15) ÷ (D1 + 15)
+Speed Fit   = (A1 + 15) × (D1 + 15) ÷ the best reshape's product
+GO Fit      = Attack Fit × Defense Fit × Speed Fit
+```
+
+**Example, Garchomp** (108/130/95/80/85/102, GO 261/193):
+
+- Concentrated at Speed 102, it would be 386/237.
+- Its best reshape is 108/247/212/1/1/31, which gives 395/243.
+- GO Fit = (276 × 208) ÷ (410 × 258) = 54.3%, which is 68.8% × 82.5% × 95.5%.
+
+**Rules:**
+
+- **Total stat points are fixed.** More Speed always raises GO stats, so Speed only has an optimum if its points come from somewhere. It trades with attack and defense in proportion, so an attacker stays an attacker.
+- **The best shape keeps the form's own adjustment.** It doesn't re-test the 4,000 CP line. For 458 forms the best shape would trip the ×0.91 cut in real GO, so it's a yardstick, not a buildable Pokémon.
+- **Formula stats on both sides,** even where GO differs. The 6 exceptions in §4 can't distort the score: Shedinja's hand-set Stamina of 1 plays no part.
+- **Stored per entry:** `goFit.score`, `attackFit`, `defenseFit` and `speedFit` to one decimal, `goFit.best.ms` and `goFit.best.go`, and `ranks.goFitPct`. The rank uses the stored score, so forms showing the same score share a rank.
+
+**Estimating ideal Speed:** `(BST − HP − 425) / 2`, minimum 1. GO Attack and Defense both scale with points × (425 + Speed), and that product peaks when the two are equal. The estimate is off by 1.9 on average. It stops working once a main stat reaches 255, because spare points then flow into Speed; Mewtwo's ideal Speed is 141, not 74.
+
+**How it behaves:**
+
+- Scores run from 32.2 to 79.0 with a median of 50.8. Nothing gets near 100, because no real form leaves its secondary stats at 1, so the percentile matters as much as the percentage.
+- Shape isn't strength. Bonsly tops the list at 79.0 and Mewtwo scores 54.0.
+- Speed is usually overfunded: ideal Speed is 1 for 536 forms, and only 89 forms would want more Speed than they have.
+- Weak forms score lower, and Speed Fit is the reason. The average is 46.6 below BST 300 and 55.4 at BST 700+. The correlation with BST is 0.70 for Speed Fit, against −0.08 for Attack Fit and −0.18 for Defense Fit. The effect is real rather than an artefact: 40% of Magikarp's stats are in Speed.
+- Scoring a best shape again gives 98.6–100, not always exactly 100. The attack and defense split rounds to whole points, and the new spread's ratio can round one point differently.
+
+## 8. Open questions for Phase 2
+
+- **Showing GO Fit on the site:**
+  - Attack Fit, Defense Fit and Speed Fit each get their own column.
+  - The score appears with its percentile: "54.3%, better than 71% of forms".
+  - Add a CP pair later: current CP at L50 next to the CP of the best shape, `cp(goFit.best.go, 50)`. Label it as a yardstick, because the best shape maximises stat product rather than CP and can sit above what the cut allows.
 - **Format lenses** (research doc 1 §3):
   - Great/Ultra League stat product needs a search over IVs and levels under the CP cap.
   - Raids need an Attack-weighted metric.
 - **Shadow variants** (×1.2 Attack, ×0.833 Defense). Only `shadowAvailable` is stored so far.
 - **Non-stat notes** such as lost abilities (Huge Power, Truant, Wonder Guard) and items. These should be an annotation layer, not part of the score.
 
-Resolved in Phase 1: Stamina rounding under an adjustment (§1).
+Resolved in Phase 1: Stamina rounding under an adjustment (§1) and the headline score (§7).
 
 [Bulbapedia, Stat (GO)]: https://bulbapedia.bulbagarden.net/wiki/Stat_(GO)

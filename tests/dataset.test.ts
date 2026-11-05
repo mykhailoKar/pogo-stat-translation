@@ -68,7 +68,7 @@ describe("dataset shape", () => {
     for (const p of result.dataset.pokemon) {
       for (const k of ["atk", "def", "sta"] as const) assert.ok(Number.isInteger(p.go[k]) && p.go[k] > 0, `${p.id} ${k}`);
       assert.ok(p.metrics.cp.l40 <= p.metrics.cp.l50 && p.metrics.cp.l50 <= p.metrics.cp.l51, p.id);
-      for (const k of ["bstPct", "cpL50Pct", "spL50Pct"] as const) assert.ok(p.ranks[k] >= 0 && p.ranks[k] <= 100, `${p.id} ${k}`);
+      for (const k of ["bstPct", "cpL50Pct", "spL50Pct", "goFitPct"] as const) assert.ok(p.ranks[k] >= 0 && p.ranks[k] <= 100, `${p.id} ${k}`);
       assert.equal(p.go.status === "actual", p.go.goId !== null, p.id);
       assert.equal(p.exception !== null, p.go.status === "actual" && (p.go.atk !== p.goPredicted.atk || p.go.def !== p.goPredicted.def || p.go.sta !== p.goPredicted.sta), p.id);
     }
@@ -78,6 +78,48 @@ describe("dataset shape", () => {
     assert.equal(byId.get("rayquaza-mega")?.ranks.pool, "mega");
     assert.equal(byId.get("kyogre-primal")?.ranks.pool, "mega");
     assert.equal(byId.get("rayquaza")?.ranks.pool, "standard");
+  });
+});
+
+describe("GO Fit on real data", () => {
+  const fitOf = (id: string): DatasetEntry["goFit"] => {
+    const fit = byId.get(id)?.goFit;
+    assert.ok(fit, `${id} not in dataset`);
+    return fit;
+  };
+  const sum = (ms: DatasetEntry["goFit"]["best"]["ms"]): number => ms.hp + ms.atk + ms.def + ms.spa + ms.spd + ms.spe;
+
+  it("is a sane reshape on every entry", () => {
+    for (const p of result.dataset.pokemon) {
+      const { score, attackFit, defenseFit, speedFit, best } = p.goFit;
+      for (const value of [score, attackFit, defenseFit, speedFit]) assert.ok(value > 0 && value <= 100, `${p.id} ${value}`);
+      assert.ok(Math.abs((attackFit * defenseFit * speedFit) / 10_000 - score) < 0.2, `${p.id} parts don't multiply into the score`);
+      for (const value of Object.values(best.ms)) assert.ok(value >= 1 && value <= 255, `${p.id} ${value}`);
+      assert.equal(best.ms.hp, p.msGoBasis?.hp ?? p.ms.hp, p.id);
+    }
+  });
+
+  it("matches the worked examples", () => {
+    const { score, attackFit, defenseFit, speedFit } = fitOf("garchomp");
+    assert.deepEqual([score, attackFit, defenseFit, speedFit], [54.3, 68.8, 82.5, 95.5]);
+    assert.equal(fitOf("blissey").score, 76);
+    assert.equal(fitOf("mew").score, 46.1);
+  });
+
+  it("reshapes the stats GO uses, not the current ones", () => {
+    assert.equal(byId.get("cresselia")?.ms.bst, 580);
+    assert.equal(sum(fitOf("cresselia").best.ms), 600);
+  });
+
+  it("uses the formula's stats for listed exceptions", () => {
+    assert.equal(byId.get("shedinja")?.go.sta, 1);
+    assert.equal(fitOf("shedinja").best.go.sta, 51);
+  });
+
+  it("ranks within each pool", () => {
+    assert.equal(byId.get("bonsly")?.ranks.goFitPct, 100);
+    const megas = result.dataset.pokemon.filter((p) => p.ranks.pool === "mega");
+    assert.equal(Math.max(...megas.map((p) => p.ranks.goFitPct)), 100);
   });
 });
 

@@ -6,8 +6,9 @@ GO collapses six stats into three with a fixed, lopsided formula. Speed shrinks 
 
 **Status: Phase 1 (data).** The pipeline builds and validates the dataset. The website comes in Phase 2.
 
-- `public/data/pokemon.json`: 1,250 forms, with current and GO-era main-series stats, GO stats (actual or predicted), conversion steps, CP, stat product, bulk and percentile ranks.
+- `public/data/pokemon.json`: 1,250 forms, with current and GO-era main-series stats, GO stats (actual or predicted), conversion steps, CP, stat product, bulk, GO Fit and percentile ranks.
 - The conversion formula reproduces GO's stats exactly for **1,205 of 1,211** entries that have GO data. The other 6 are documented exceptions, such as Shedinja's hand-set Stamina of 1.
+- **GO Fit** is the headline score: a form's stat product as a percentage of the best reshape of its own stat points, split into Attack Fit, Defense Fit and Speed Fit. See [methodology §7](docs/methodology.md#7-go-fit).
 
 ## Quick start
 
@@ -26,7 +27,7 @@ npm run typecheck
 
 | Path | What |
 |---|---|
-| `src/lib/` | Formula, stat-era rule, metrics, types. Pure; shared with the future site |
+| `src/lib/` | Formula, stat-era rule, metrics, GO Fit, types. Pure; shared with the future site |
 | `pipeline/` | Fetch, load, join, select, build, reports |
 | `data/sources.lock.json` | Pinned upstream commits and file hashes |
 | `data/overrides.yaml` | Hand-reviewed rules: id mappings, ignores, fixed multipliers, exceptions |

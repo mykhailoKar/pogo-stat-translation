@@ -42,6 +42,20 @@ export interface Conversion extends GoStats {
   steps: ConversionSteps;
 }
 
+/** How much of its potential GO output a form's stat shape reaches. See docs/methodology.md §7. */
+export interface GoFit {
+  /** Percent of the best reshape's stat product; equals attackFit × defenseFit × speedFit. */
+  score: number;
+  /** GO Attack (with IVs) as a percent of having all attack points in one stat. */
+  attackFit: number;
+  /** GO Defense (with IVs) as a percent of having all defense points in one stat. */
+  defenseFit: number;
+  /** Percent of the best reshape that the form's own Speed allows once its stats are concentrated. */
+  speedFit: number;
+  /** The best reshape of the same stat points, and the GO stats it converts to. */
+  best: { ms: MsStats; go: GoStats };
+}
+
 export type Pool = "standard" | "mega";
 
 export interface DatasetEntry {
@@ -79,11 +93,14 @@ export interface DatasetEntry {
     statProductL50: number;
     bulkL50: number;
   };
+  /** Computed from the formula's stats on both sides, with percentages to one decimal. */
+  goFit: GoFit;
   ranks: {
     pool: Pool;
     bstPct: number;
     cpL50Pct: number;
     spL50Pct: number;
+    goFitPct: number;
   };
 }
 

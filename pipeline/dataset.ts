@@ -1,8 +1,9 @@
 // Assembles the dataset from the pinned sources. Pure apart from reading data/raw and data/overrides.yaml.
 import { toGo, type AdjustmentRule } from "../src/lib/formula.ts";
+import { goFit } from "../src/lib/go-fit.ts";
 import { bulk, cp, percentileRanks, statProduct } from "../src/lib/metrics.ts";
 import { goBasisGeneration, statDiff, statsInGeneration } from "../src/lib/stat-basis.ts";
-import type { Conversion, Dataset, DatasetEntry, GoStats, Pool } from "../src/lib/types.ts";
+import type { Conversion, Dataset, DatasetEntry, GoFit, GoStats, Pool } from "../src/lib/types.ts";
 import { joinGo, type JoinResult } from "./join.ts";
 import { loadPokeapi, type MsForm } from "./load-pokeapi.ts";
 import { loadPvpoke, type PvpokeData } from "./load-pvpoke.ts";
@@ -43,6 +44,20 @@ export interface BuildResult {
 
 function sameStats(a: GoStats, b: GoStats): boolean {
   return a.atk === b.atk && a.def === b.def && a.sta === b.sta;
+}
+
+function oneDecimal(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function roundGoFit(fit: GoFit): GoFit {
+  return {
+    score: oneDecimal(fit.score),
+    attackFit: oneDecimal(fit.attackFit),
+    defenseFit: oneDecimal(fit.defenseFit),
+    speedFit: oneDecimal(fit.speedFit),
+    best: fit.best,
+  };
 }
 
 function adjustmentRule(f: MsForm, overrides: Overrides): AdjustmentRule {
@@ -134,7 +149,8 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
         statProductL50: statProduct(goStats, 50),
         bulkL50: bulk(goStats, 50),
       },
-      ranks: { pool, bstPct: 0, cpL50Pct: 0, spL50Pct: 0 },
+      goFit: roundGoFit(goFit(basis, Math.round(predicted.steps.adjustment * 100))),
+      ranks: { pool, bstPct: 0, cpL50Pct: 0, spL50Pct: 0, goFitPct: 0 },
     };
   });
 
@@ -143,10 +159,12 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
     const bstPct = percentileRanks(members.map((e) => e.ms.bst));
     const cpPct = percentileRanks(members.map((e) => e.metrics.cp.l50));
     const spPct = percentileRanks(members.map((e) => e.metrics.statProductL50));
+    const goFitPct = percentileRanks(members.map((e) => e.goFit.score));
     members.forEach((e, i) => {
       e.ranks.bstPct = bstPct[i] as number;
       e.ranks.cpL50Pct = cpPct[i] as number;
       e.ranks.spL50Pct = spPct[i] as number;
+      e.ranks.goFitPct = goFitPct[i] as number;
     });
   }
 
