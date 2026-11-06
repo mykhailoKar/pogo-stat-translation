@@ -2,6 +2,8 @@
 
 Judges how well every main-series Pokémon's base stats carry over into Pokémon GO.
 
+**Live site:** https://mykhailokar.github.io/pogo-stat-translation/
+
 GO collapses six stats into three with a fixed, lopsided formula. Speed shrinks to a small multiplier, the weaker attacking stat counts for 1/8, HP gets a flat +50, and very strong Pokémon take a ×0.91 cut. Some Pokémon come out far stronger than their main-series stat total suggests and others far weaker. This project measures that, for every form.
 
 **Status: Phase 2 (core site).** The pipeline builds and validates the dataset, and a static site lists every form with GO Fit, its three parts, its percentile and its level 50 CP. An About page explains the method.

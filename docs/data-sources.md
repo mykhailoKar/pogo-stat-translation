@@ -43,6 +43,15 @@ Things to know:
 - [Bulbapedia, Stat (GO)](https://bulbapedia.bulbagarden.net/wiki/Stat_(GO)): conversion formula, adjustment and stat-era rules.
 - [Dittobase stat converter](https://www.dittobase.com/pokemon-go/stat-converter): rounding conventions; Mega Zygarde's expected GO line.
 
+## Cross-check (2026-11-06)
+
+A one-off check against sources the pipeline doesn't use, after Ultra Necrozma's Stamina was reported as one too high. No stats changed as a result.
+
+- **Main-series stats:** all 1,250 forms match Pokémon Showdown's `data/pokedex.ts`.
+- **GO stats:** 1,205 of the 1,211 forms with GO data match the raw game master from [PokeMiners](https://github.com/PokeMiners/game_masters) exactly. The other 6 aren't in its latest snapshot (2026-08-29): Mega Staraptor, Mega Chandelure, Hisuian Sliggoo, Hisuian Goodra and both Basculegion. Their PvPoke stats match the formula exactly.
+- **Ultra Necrozma is 337/196/200.** The game master, Serebii, Pokémon GO Hub and GameInfo all agree. A 199 comes from rounding Stamina down under the cut, which is wrong for 39 forms, always by 1 ([methodology §1](methodology.md#1-conversion)).
+- **Dugtrio has two templates in the game master:** `DUGTRIO` with 134 Defense and `DUGTRIO_NORMAL` with 136. The dataset's 136 is the form players get, and it matches Serebii and the formula. Pokémon GO Hub shows 134.
+
 ## Refreshing
 
 ```sh

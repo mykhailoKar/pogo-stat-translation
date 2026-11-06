@@ -13,6 +13,7 @@
   --badge-ink: #6b4708;
   --logo-from: #8a97a3;
   --logo-to: #0a6464;
+  --logo-boost: #5cb8ab;
   --radius: 10px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
@@ -33,6 +34,7 @@
     --badge-ink: #f5cd8b;
     --logo-from: #76828f;
     --logo-to: #5fe0cf;
+    --logo-boost: #a4e6da;
   }
 }
 

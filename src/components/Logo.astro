@@ -1,5 +1,7 @@
 ---
-// Six strands merging into three: the six main-series stats becoming GO's three.
+// Six strands become three, following GO's formula. Top to bottom on the left they're HP, Attack, Sp. Atk, Speed,
+// Defense and Sp. Def. HP alone becomes Stamina, each pair merges, and Speed splits to boost GO Attack and GO Defense.
+// Strokes can't change width, so each strand is a filled ribbon, and all three finish at the same thickness.
 ---
 
 <svg class="logo-mark" viewBox="0 0 64 56" aria-hidden="true" focusable="false">
@@ -8,13 +10,11 @@
       <stop offset="0" stop-color="var(--logo-from)"></stop>
       <stop offset="0.75" stop-color="var(--logo-to)"></stop>
     </linearGradient>
+    <linearGradient id="logo-speed" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="0">
+      <stop offset="0.45" stop-color="var(--logo-boost)"></stop>
+      <stop offset="0.82" stop-color="var(--logo-to)"></stop>
+    </linearGradient>
   </defs>
-  <g fill="none" stroke="url(#logo-strand)" stroke-width="4.5" stroke-linecap="round">
-    <path d="M3 4.5h9c11 0 11 8 22 8h27"></path>
-    <path d="M3 13.5h9c11 0 11 3.5 22 3.5h27"></path>
-    <path d="M3 23h9c11 0 11 3 22 3h27"></path>
-    <path d="M3 33h9c11 0 11-3 22-3h27"></path>
-    <path d="M3 42.5h9c11 0 11-3.5 22-3.5h27"></path>
-    <path d="M3 51.5h9c11 0 11-8 22-8h27"></path>
-  </g>
+  <path fill="url(#logo-speed)" d="M3 33H16V36H3A1.5 1.5 0 0 1 3 33ZM15.5 33C36.3 33 36.3 24.1 57 24.1L57 28C36.3 28 36.3 34.8 15.5 34.8ZM15.5 34.2C36.3 34.2 36.3 41 57 41L57 44.9C36.3 44.9 36.3 36 15.5 36ZM56 24.1H57.4V28H56ZM56 41H57.4V44.9H56Z"></path>
+  <path fill="url(#logo-strand)" d="M3 4.5C29.5 4.5 29.5 1.5 56 1.5L56 10.5C29.5 10.5 29.5 7.5 3 7.5A1.5 1.5 0 0 1 3 4.5ZM3 14C22.5 14 22.5 19 42 19L42 22.7C22.5 22.7 22.5 17 3 17A1.5 1.5 0 0 1 3 14ZM3 23.5C22.5 23.5 22.5 21.9 42 21.9L42 25.6C22.5 25.6 22.5 26.5 3 26.5A1.5 1.5 0 0 1 3 23.5ZM3 42.5C22.5 42.5 22.5 43.4 42 43.4L42 47.1C22.5 47.1 22.5 45.5 3 45.5A1.5 1.5 0 0 1 3 42.5ZM3 52C22.5 52 22.5 46.3 42 46.3L42 50C22.5 50 22.5 55 3 55A1.5 1.5 0 0 1 3 52ZM55.5 1.5H57.5A4.5 4.5 0 0 1 57.5 10.5H55.5ZM41.5 19H57V25.6H41.5ZM41.5 43.4H57V50H41.5ZM57 19H57.5A4.5 4.5 0 0 1 57.5 28H57ZM57 41H57.5A4.5 4.5 0 0 1 57.5 50H57Z"></path>
 </svg>
