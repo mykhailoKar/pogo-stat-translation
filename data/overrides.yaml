@@ -128,7 +128,7 @@ fixedAdjustment:
   # GO stats are datamined ahead of release (PvPoke released: false) and may change at launch.
   walking-wake: &cutBelowLine
     percent: 91
-    reason: "Unreleased; Niantic applied ×0.91 below the 4000 CP line"
+    reason: "Unreleased; Scopely Explore applied ×0.91 below the 4000 CP line"
     source: PvPoke gamemaster
   iron-leaves: *cutBelowLine
   okidogi: *cutBelowLine
@@ -143,7 +143,7 @@ fixedAdjustment:
   # Unreleased Gen IX Pokémon left uncut although their uncut CP at L40 reaches 4000.
   great-tusk: &uncutAboveLine
     percent: 100
-    reason: "Unreleased; Niantic did not apply ×0.91 above the 4000 CP line"
+    reason: "Unreleased; Scopely Explore did not apply ×0.91 above the 4000 CP line"
     source: PvPoke gamemaster
   iron-hands: *uncutAboveLine
   roaring-moon: *uncutAboveLine

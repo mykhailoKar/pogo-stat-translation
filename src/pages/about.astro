@@ -40,7 +40,7 @@ const commit = (sha: string | undefined) => sha?.slice(0, 7) ?? "unknown";
     <p>Each row is one form. Select a column heading to sort by it, and select it again to reverse the order. Select a row to see its stats next to its best shape.</p>
     <dl>
       <dt>GO Fit</dt>
-      <dd>The headline score. It's how much of its best possible GO output a form's stat shape reaches. 100% would mean no rearrangement of its stat points could do better.</dd>
+      <dd>The headline score: how close a form comes to the best spread of its own stat points for GO. 100% would mean no rearrangement of its points could do better.</dd>
       <dt>Percentile</dt>
       <dd>The share of forms with a lower GO Fit. A percentile of 70 means the form beats 70% of the others. Megas and Primals are ranked among themselves, because they're temporary and follow different rules.</dd>
       <dt>Attack Fit</dt>
@@ -150,6 +150,6 @@ GO Fit      = {example.actual.atk} × {example.actual.def} ÷ ({example.best.atk
       <li>The conversion formula draws on <a href="https://bulbapedia.bulbagarden.net/wiki/Stat_(GO)">Bulbapedia</a> and the <a href="https://www.dittobase.com/pokemon-go/stat-converter">Dittobase stat converter</a>.</li>
     </ul>
     <p>The full dataset is available as <a href={`${home}data/pokemon.json`}>JSON</a>, and the code and methodology are on <a href="https://github.com/mykhailoKar/pogo-stat-translation">GitHub</a>.</p>
-    <p>Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Niantic. This is an unofficial fan project and isn't affiliated with any of them.</p>
+    <p>Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely Explore. This is an unofficial fan project and isn't affiliated with any of them.</p>
   </article>
 </Base>

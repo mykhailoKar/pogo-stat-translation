@@ -35,7 +35,7 @@ Applied in this order (first match wins):
 2. **Megas and Primals: ×1.**
 3. **Everything else: ×0.91 if the uncut stats reach 4000 CP at level 40 with 15/15/15 IVs, otherwise ×1.**
 
-The 14 Gen IX cases are datamined ahead of release (PvPoke `released: false`). Niantic may change them at launch, which the refresh flow in [data-sources.md](data-sources.md#refreshing) catches.
+The 14 Gen IX cases are datamined ahead of release (PvPoke `released: false`). Scopely Explore may change them at launch, which the refresh flow in [data-sources.md](data-sources.md#refreshing) catches.
 
 ## 3. Stat era
 

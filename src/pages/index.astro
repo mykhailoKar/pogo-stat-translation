@@ -15,7 +15,7 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
 <Base>
   <section class="intro">
     <h1>How well do a Pokémon's stats translate into GO?</h1>
-    <p>Pokémon GO turns six main-series stats into three. GO Fit shows how much of its best possible GO output each form's stat shape reaches.</p>
+    <p>Pokémon GO turns six main-series stats into three, and some stat spreads lose more in the change than others. GO Fit scores how close each Pokémon comes to the best spread of its own stat points. The closer to 100%, the better its stats carry over.</p>
   </section>
 
   <fieldset class="categories" id="list-categories">
@@ -51,7 +51,7 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
     <p class="count" id="list-count" role="status">{number.format(rows.length)} forms</p>
   </div>
 
-  <p class="hint">CP is at level 50 with perfect IVs. Megas and Primals are ranked among themselves. <a href={`${home}about/`}>How it's calculated</a></p>
+  <p class="hint">CP is at level 50 with perfect IVs. <a href={`${home}about/`}>How it's calculated</a></p>
 
   <noscript><p>This list needs JavaScript. The <a href={`${home}about/`}>About page</a> works without it, and the data is available as <a href={`${home}data/pokemon.json`}>JSON</a>.</p></noscript>
 

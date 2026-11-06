@@ -46,7 +46,7 @@ Pushing to `main` deploys the site to GitHub Pages through `.github/workflows/de
 
 Main-series data from [PokéAPI](https://github.com/PokeAPI/pokeapi) (BSD-3-Clause). GO stats from [PvPoke](https://github.com/pvpoke/pvpoke) (MIT). Formula references: Bulbapedia and Dittobase. See [docs/data-sources.md](docs/data-sources.md).
 
-Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Niantic. This is an unofficial fan project, not affiliated with any of them.
+Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely Explore. This is an unofficial fan project, not affiliated with any of them.
 
 ## License
 

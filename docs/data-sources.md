@@ -34,7 +34,7 @@ Quirks the loader handles:
 
 Things to know:
 - **`released` means usable in PvPoke's battles, not released in GO.** Shedinja is `false` because it can't be used in Trainer Battles. The dataset stores it as `go.pvpReleased` and never calls it "released in GO".
-- Many unreleased Pokémon have datamined GO stats (`released: false`). They count as `actual`, but Niantic may change them at launch.
+- Many unreleased Pokémon have datamined GO stats (`released: false`). They count as `actual`, but Scopely Explore may change them at launch.
 - Shadow entries (`*_shadow`) are folded into `go.shadowAvailable` on the base entry.
 - PvPoke spells some ids differently (`greattusk`, `nidoran_female`, `zacian_crowned_sword`). It also has costume and type variants with identical stats, plus a few duplicate entries. `data/overrides.yaml` maps or ignores each one with a reason, and the build fails on any entry it can't account for.
 
@@ -61,4 +61,4 @@ Then commit the lock, the dataset and the reports together.
 
 ## Attribution
 
-Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Niantic. This is an unofficial fan project, not affiliated with any of them. Data comes from PokéAPI (BSD-3-Clause) and PvPoke (MIT).
+Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely Explore. This is an unofficial fan project, not affiliated with any of them. Data comes from PokéAPI (BSD-3-Clause) and PvPoke (MIT).

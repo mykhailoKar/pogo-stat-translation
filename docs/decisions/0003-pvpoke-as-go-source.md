@@ -4,8 +4,8 @@
 
 ## Context
 
-Actual GO base stats come from Niantic's game master, which the community datamines. The options were:
-- the raw dump (PokeMiners `game_masters`), which is authoritative but verbose and Niantic-shaped,
+Actual GO base stats come from the game master, which the community datamines. The options were:
+- the raw dump (PokeMiners `game_masters`), which is authoritative but verbose and built around the game's internals,
 - PvPoke's curated `src/data/gamemaster/pokemon.json`, which is MIT-licensed, clean, and one entry per Pokémon or form, with Shadow entries and a `released` flag.
 
 ## Decision

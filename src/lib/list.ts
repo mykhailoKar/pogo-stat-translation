@@ -51,7 +51,7 @@ export type Direction = "asc" | "desc";
 export const COLUMNS = [
   { key: "dex", label: "Dex number", short: "#", first: "asc", hint: "National Pokédex number." },
   { key: "name", label: "Name", short: "Pokémon", first: "asc", hint: "Select a row to see its stats and best shape." },
-  { key: "goFit", label: "GO Fit", short: "GO Fit", first: "desc", hint: "How much of its best possible GO output this form's stat shape reaches." },
+  { key: "goFit", label: "GO Fit", short: "GO Fit", first: "desc", hint: "How close this form comes to the best spread of its own stat points." },
   { key: "percentile", label: "Percentile", short: "Percentile", first: "desc", hint: "Share of forms with a lower GO Fit. Megas and Primals are ranked among themselves." },
   { key: "attackFit", label: "Attack Fit", short: "Attack Fit", first: "desc", hint: "GO Attack compared with having all attack points in one stat." },
   { key: "defenseFit", label: "Defense Fit", short: "Defense Fit", first: "desc", hint: "GO Defense compared with having all defense points in one stat." },
