@@ -28,3 +28,5 @@ jobs:
       - name: Committed dataset and reports match a fresh build
         run: git diff --exit-code -- public/data data/reports
       - run: npm test
+      - name: Build the site
+        run: npm run build

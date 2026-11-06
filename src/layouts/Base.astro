@@ -1,0 +1,52 @@
+---
+import Logo from "../components/Logo.astro";
+import "../site/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const SITE_NAME = "PoGo Stat Translation";
+const DEFAULT_DESCRIPTION = "How well every Pokémon's main-series stats translate into Pokémon GO, form by form.";
+
+const { title, description = DEFAULT_DESCRIPTION } = Astro.props;
+const fullTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
+const home = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={`${home}favicon.svg`} />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f4ef" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#12151a" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="logo" href={home} aria-label={`${SITE_NAME} home`}>
+        <Logo />
+        <span class="logo-text"><span>PoGo Stat</span> <span>Translation</span></span>
+      </a>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <nav aria-label="Site">
+        <a href={`${home}about/`}>About</a>
+      </nav>
+      <p>Unofficial fan project, not affiliated with Nintendo, Creatures Inc., GAME FREAK or Niantic.</p>
+    </footer>
+  </body>
+</html>

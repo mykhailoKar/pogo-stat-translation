@@ -39,6 +39,16 @@ function reshape(ms: MsStats, attackPoints: number, defensePoints: number, spe: 
   return { hp: ms.hp, atk, def, spa, spd, spe };
 }
 
+/** All of each pair's points in its higher stat, with Speed left alone. */
+function focus(ms: MsStats): MsStats {
+  return reshape(ms, ms.atk + ms.spa, ms.def + ms.spd, ms.spe);
+}
+
+/** The GO stats behind Attack Fit and Defense Fit: what the form gets from concentrating alone. */
+export function concentratedGo(ms: MsStats, percent: number): GoStats {
+  return convert(focus(ms), percent);
+}
+
 /**
  * Scores a form's stats (in the stat era GO uses) against the best reshape of the same points.
  * `percent` is the form's own adjustment multiplier; reshapes keep it rather than re-testing the
@@ -52,7 +62,7 @@ export function goFit(ms: MsStats, percent: number): GoFit {
   const totalPoints = attackPoints + defensePoints + ms.spe;
 
   const actual = convert(ms, percent);
-  const focusedMs = reshape(ms, attackPoints, defensePoints, ms.spe);
+  const focusedMs = focus(ms);
   const focused = convert(focusedMs, percent);
 
   // Starting from the form's own Speed means it only changes when another value is strictly better.

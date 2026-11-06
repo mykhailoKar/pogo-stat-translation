@@ -25,6 +25,8 @@ function ms(id: string, dex: number, opts: Partial<MsForm> = {}): MsForm {
     isMega: false,
     isPrimal: false,
     isRegional: /-(alola|galar|hisui|paldea)/.test(id),
+    evolutionChain: dex,
+    speciesEvolves: false,
     ms: { hp: 50, atk: 50, def: 50, spa: 50, spd: 50, spe: 50 },
     past: [],
     ...opts,

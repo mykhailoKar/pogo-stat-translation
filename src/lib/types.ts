@@ -56,6 +56,14 @@ export interface GoFit {
   best: { ms: MsStats; go: GoStats };
 }
 
+/** The best shape as GO would really convert it: unlike GO Fit, this re-tests the 4,000 CP line. */
+export interface IdealInGo extends GoStats {
+  /** CP at level 50 with 15/15/15 IVs. */
+  cpL50: number;
+  /** True when the best shape takes a cut that the form itself doesn't. */
+  cut: boolean;
+}
+
 export type Pool = "standard" | "mega";
 
 export interface DatasetEntry {
@@ -94,7 +102,7 @@ export interface DatasetEntry {
     bulkL50: number;
   };
   /** Computed from the formula's stats on both sides, with percentages to one decimal. */
-  goFit: GoFit;
+  goFit: GoFit & { ideal: IdealInGo };
   ranks: {
     pool: Pool;
     bstPct: number;

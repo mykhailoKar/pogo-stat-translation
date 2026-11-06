@@ -15,6 +15,8 @@ const PatternRule = z.object({ pattern: z.string().min(1), reason });
 const OverridesSchema = z.object({
   excludeForms: z.array(PatternRule).default([]),
   includeForms: z.array(z.object({ id: z.string(), reason })).default([]),
+  starters: z.array(z.object({ species: z.array(z.string()).min(1), reason })).default([]),
+  finalForms: z.array(z.object({ id: z.string(), reason })).default([]),
   idMap: z.record(z.string(), z.string()).default({}),
   ignoreGo: z.array(PatternRule).default([]),
   fixedAdjustment: z

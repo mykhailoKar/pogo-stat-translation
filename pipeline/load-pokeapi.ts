@@ -43,6 +43,10 @@ export interface MsForm {
   isMega: boolean;
   isPrimal: boolean;
   isRegional: boolean;
+  /** PokéAPI's evolution chain id, shared by every species in a line. */
+  evolutionChain: number;
+  /** Whether any species evolves from this one. Evolution is per species, so a form can differ. */
+  speciesEvolves: boolean;
   ms: MsStats;
   past: PastStat[];
 }
@@ -78,7 +82,9 @@ function groupBy<T>(rows: T[], key: (r: T) => string): Map<string, T[]> {
 
 export function loadPokeapi(): MsForm[] {
   const pokemon = readCsv("pokemon.csv");
-  const species = new Map(readCsv("pokemon_species.csv").map((r) => [r.id as string, r]));
+  const speciesRows = readCsv("pokemon_species.csv");
+  const species = new Map(speciesRows.map((r) => [r.id as string, r]));
+  const evolvingSpecies = new Set(speciesRows.map((r) => r.evolves_from_species_id).filter(Boolean));
   const speciesNames = new Map(
     readCsv("pokemon_species_names.csv")
       .filter((r) => r.local_language_id === ENGLISH)
@@ -159,6 +165,8 @@ export function loadPokeapi(): MsForm[] {
       isMega: MEGA.test(id),
       isPrimal: PRIMAL.test(id),
       isRegional: REGIONAL.test(id),
+      evolutionChain: num(sp, "evolution_chain_id"),
+      speciesEvolves: evolvingSpecies.has(sp.id),
       ms,
       past,
     };

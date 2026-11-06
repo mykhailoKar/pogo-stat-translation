@@ -121,6 +121,50 @@ describe("GO Fit on real data", () => {
     const megas = result.dataset.pokemon.filter((p) => p.ranks.pool === "mega");
     assert.equal(Math.max(...megas.map((p) => p.ranks.goFitPct)), 100);
   });
+
+  it("applies GO's real cut to the ideal, which GO Fit leaves out", () => {
+    // Garchomp's best shape is 395/243/239 uncut. That's over the line, so GO would cut it to 359/221/217.
+    const { best, ideal } = fitOf("garchomp");
+    assert.deepEqual(best.go, { atk: 395, def: 243, sta: 239 });
+    assert.deepEqual(ideal, { atk: 359, def: 221, sta: 217, cpL50: 6179, cut: true });
+  });
+
+  it("doesn't flag forms that are already cut, or re-test Megas", () => {
+    assert.deepEqual(fitOf("slaking").ideal, { atk: 425, def: 197, sta: 284, cpL50: 7822, cut: false });
+    assert.equal(fitOf("rayquaza-mega").ideal.cut, false);
+    assert.equal(fitOf("rayquaza-mega").ideal.cpL50, 10815);
+  });
+
+  it("never puts the ideal below a form's current CP", () => {
+    for (const p of result.dataset.pokemon) assert.ok(p.goFit.ideal.cpL50 > p.metrics.cp.l50, p.id);
+  });
+});
+
+describe("category tags", () => {
+  const tagged = (tag: string): DatasetEntry[] =>
+    result.dataset.pokemon.filter((p) => p.ranks.pool === "standard" && p.tags.includes(tag));
+
+  it("covers all 27 starter lines and their regional forms", () => {
+    assert.equal(tagged("starter").length, 85);
+    for (const id of ["bulbasaur", "ivysaur", "venusaur", "quaxly", "quaquaval", "typhlosion-hisui"]) {
+      assert.ok(byId.get(id)?.tags.includes("starter"), id);
+    }
+    for (const id of ["pikachu", "eevee"]) assert.equal(byId.get(id)?.tags.includes("starter"), false, id);
+  });
+
+  it("treats a species with no evolution as fully evolved", () => {
+    for (const id of ["charizard", "tauros", "mewtwo", "slowbro-galar"]) assert.ok(byId.get(id)?.tags.includes("fully-evolved"), id);
+    for (const id of ["charmander", "pichu", "stantler"]) assert.equal(byId.get(id)?.tags.includes("fully-evolved"), false, id);
+  });
+
+  it("handles forms that evolve differently from their species", () => {
+    for (const id of ["corsola", "linoone", "farfetchd", "mr-mime", "qwilfish", "floette-eternal"]) {
+      assert.ok(byId.get(id)?.tags.includes("fully-evolved"), id);
+    }
+    for (const id of ["corsola-galar", "linoone-galar", "farfetchd-galar", "mr-mime-galar", "qwilfish-hisui", "floette"]) {
+      assert.equal(byId.get(id)?.tags.includes("fully-evolved"), false, id);
+    }
+  });
 });
 
 describe("research spot checks on real data", () => {

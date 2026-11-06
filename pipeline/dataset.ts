@@ -67,7 +67,7 @@ function adjustmentRule(f: MsForm, overrides: Overrides): AdjustmentRule {
   return { kind: "standard" };
 }
 
-function tagsOf(f: MsForm): string[] {
+function tagsOf(f: MsForm, starterChains: Set<number>, finalForms: Set<string>): string[] {
   const tags: string[] = [];
   if (f.isLegendary) tags.push("legendary");
   if (f.isMythical) tags.push("mythical");
@@ -75,6 +75,8 @@ function tagsOf(f: MsForm): string[] {
   if (f.isMega) tags.push("mega");
   if (f.isPrimal) tags.push("primal");
   if (f.isRegional) tags.push("regional");
+  if (starterChains.has(f.evolutionChain)) tags.push("starter");
+  if (!f.speciesEvolves || finalForms.has(f.id)) tags.push("fully-evolved");
   return tags;
 }
 
@@ -88,6 +90,16 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
   const matchByMsId = new Map(join.matches.map((m) => [m.msId, m]));
   const { kept, dropped } = selectForms(candidates, new Set(matchByMsId.keys()), overrides);
 
+  const formsById = new Map(allForms.map((f) => [f.id, f]));
+  const starterChains = new Set<number>();
+  for (const { species } of overrides.starters) {
+    for (const id of species) {
+      const chain = formsById.get(id)?.evolutionChain;
+      if (chain !== undefined) starterChains.add(chain);
+    }
+  }
+  const finalForms = new Set(overrides.finalForms.map((f) => f.id));
+
   const validation: BuildResult["validation"] = { exact: [], exceptions: [], unexplained: [] };
   const predictedIds: string[] = [];
 
@@ -95,7 +107,10 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
     const basisGen = overrides.basisGeneration[f.id]?.generation ?? goBasisGeneration(f.formGen);
     const basis = statsInGeneration(f.ms, f.past, basisGen);
     const diff = statDiff(f.ms, basis);
-    const predicted = toGo(basis, adjustmentRule(f, overrides));
+    const rule = adjustmentRule(f, overrides);
+    const predicted = toGo(basis, rule);
+    const fit = goFit(basis, Math.round(predicted.steps.adjustment * 100));
+    const ideal = toGo(fit.best.ms, rule);
     const match = matchByMsId.get(f.id);
 
     let exception: DatasetEntry["exception"] = null;
@@ -132,7 +147,7 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
       form: f.form,
       gen: f.gen,
       types: f.types,
-      tags: tagsOf(f),
+      tags: tagsOf(f, starterChains, finalForms),
       ms: { ...f.ms, bst },
       msGoBasis: diff ? { ...diff, gen: basisGen } : null,
       go: {
@@ -149,7 +164,16 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
         statProductL50: statProduct(goStats, 50),
         bulkL50: bulk(goStats, 50),
       },
-      goFit: roundGoFit(goFit(basis, Math.round(predicted.steps.adjustment * 100))),
+      goFit: {
+        ...roundGoFit(fit),
+        ideal: {
+          atk: ideal.atk,
+          def: ideal.def,
+          sta: ideal.sta,
+          cpL50: cp(ideal, 50),
+          cut: ideal.steps.adjustment < predicted.steps.adjustment,
+        },
+      },
       ranks: { pool, bstPct: 0, cpL50Pct: 0, spL50Pct: 0, goFitPct: 0 },
     };
   });
@@ -191,6 +215,13 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
   }
   for (const { id } of overrides.includeForms) {
     if (!allIds.has(id)) staleOverrides.push(`includeForms ${id}: no such PokéAPI form`);
+  }
+  for (const id of overrides.starters.flatMap((s) => s.species)) {
+    if (!allIds.has(id)) staleOverrides.push(`starters ${id}: no such PokéAPI form`);
+  }
+  for (const { id } of overrides.finalForms) {
+    if (!keptIds.has(id)) staleOverrides.push(`finalForms ${id}: not in the dataset`);
+    else if (!formsById.get(id)?.speciesEvolves) staleOverrides.push(`finalForms ${id}: its species doesn't evolve, so it isn't needed`);
   }
   const usedIdMap = new Set(join.matches.filter((m) => m.method === "idMap").map((m) => m.go.goId));
   for (const goId of Object.keys(overrides.idMap)) {

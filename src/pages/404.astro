@@ -1,0 +1,12 @@
+---
+import Base from "../layouts/Base.astro";
+
+const home = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
+---
+
+<Base title="Page not found">
+  <section class="not-found">
+    <h1>Page not found</h1>
+    <p><a href={home}>Back to the list</a></p>
+  </section>
+</Base>

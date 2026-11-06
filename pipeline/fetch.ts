@@ -14,7 +14,7 @@ import {
   type SourceName,
 } from "./sources.ts";
 
-const USER_AGENT = "pogo-stat-transfer-pipeline";
+const USER_AGENT = "pogo-stat-translation-pipeline";
 
 function sha256(buf: Uint8Array): string {
   return createHash("sha256").update(buf).digest("hex");

@@ -2,7 +2,7 @@
 
 How the pipeline turns main-series base stats into Pokémon GO stats and metrics. Code: `src/lib/` (pure, shared with the future site). Research behind it: [`research/`](research/README.md).
 
-**Status (Phase 1):** the conversion and raw metrics are settled and validated against GO data. The headline score, GO Fit, is in [§7](#7-go-fit). What's left is in [Open questions](#8-open-questions-for-phase-2).
+**Status:** the conversion and raw metrics are settled and validated against GO data. The headline score, GO Fit, is in [§7](#7-go-fit), and the site's ideal CP and categories are in [§8](#8-ideal-cp) and [§9](#9-categories). What's left is in [Open questions](#10-open-questions).
 
 Figures below are for the pinned sources in `data/sources.lock.json`. The current numbers are always in [`data/reports/validation.md`](../data/reports/validation.md).
 
@@ -141,9 +141,9 @@ GO Fit      = Attack Fit × Defense Fit × Speed Fit
 **Rules:**
 
 - **Total stat points are fixed.** More Speed always raises GO stats, so Speed only has an optimum if its points come from somewhere. It trades with attack and defense in proportion, so an attacker stays an attacker.
-- **The best shape keeps the form's own adjustment.** It doesn't re-test the 4,000 CP line. For 458 forms the best shape would trip the ×0.91 cut in real GO, so it's a yardstick, not a buildable Pokémon.
+- **The best shape keeps the form's own adjustment.** It doesn't re-test the 4,000 CP line. For 458 forms the best shape would trip the ×0.91 cut in real GO, so it's a yardstick, not a buildable Pokémon. §8 shows what GO would make of it.
 - **Formula stats on both sides,** even where GO differs. The 6 exceptions in §4 can't distort the score: Shedinja's hand-set Stamina of 1 plays no part.
-- **Stored per entry:** `goFit.score`, `attackFit`, `defenseFit` and `speedFit` to one decimal, `goFit.best.ms` and `goFit.best.go`, and `ranks.goFitPct`. The rank uses the stored score, so forms showing the same score share a rank.
+- **Stored per entry:** `goFit.score`, `attackFit`, `defenseFit` and `speedFit` to one decimal, `goFit.best.ms` and `goFit.best.go`, `goFit.ideal` (§8), and `ranks.goFitPct`. The rank uses the stored score, so forms showing the same score share a rank.
 
 **Estimating ideal Speed:** `(BST − HP − 425) / 2`, minimum 1. GO Attack and Defense both scale with points × (425 + Speed), and that product peaks when the two are equal. The estimate is off by 1.9 on average. It stops working once a main stat reaches 255, because spare points then flow into Speed; Mewtwo's ideal Speed is 141, not 74.
 
@@ -155,18 +155,53 @@ GO Fit      = Attack Fit × Defense Fit × Speed Fit
 - Weak forms score lower, and Speed Fit is the reason. The average is 46.6 below BST 300 and 55.4 at BST 700+. The correlation with BST is 0.70 for Speed Fit, against −0.08 for Attack Fit and −0.18 for Defense Fit. The effect is real rather than an artefact: 40% of Magikarp's stats are in Speed.
 - Scoring a best shape again gives 98.6–100, not always exactly 100. The attack and defense split rounds to whole points, and the new spread's ratio can round one point differently.
 
-## 8. Open questions for Phase 2
+## 8. Ideal CP
 
-- **Showing GO Fit on the site:**
-  - Attack Fit, Defense Fit and Speed Fit each get their own column.
-  - The score appears with its percentile: "54.3%, better than 71% of forms".
-  - Add a CP pair later: current CP at L50 next to the CP of the best shape, `cp(goFit.best.go, 50)`. Label it as a yardstick, because the best shape maximises stat product rather than CP and can sit above what the cut allows.
+`goFit.ideal`, shown on the site as L50 CP ideal. It's the best shape run through GO's real rules, so the number is one GO could actually show:
+
+```
+ideal = convert goFit.best.ms with §1, using the form's real rule from §2
+cpL50 = CP of ideal at level 50 with 15/15/15 (§5)
+cut   = true when ideal's adjustment is lower than the form's own
+```
+
+This is the one place the best shape re-tests the 4,000 CP line. GO Fit itself doesn't (§7): it compares both shapes under the form's own multiplier, so a score reflects shape alone.
+
+- **458 forms are newly cut,** and none falls below its current CP, so no form needs special handling.
+- **Garchomp:** 4,479 now, 6,179 ideal at 359/221/217. It would be 7,411 without the cut.
+- **Mew:** 3,691 now, 5,971 ideal, also cut.
+- **Slaking:** 5,010 now, 7,822 ideal. It's already cut, so `cut` is false.
+- **Mega Rayquaza:** 6,458 now, 10,815 ideal. Its fixed ×0.97 stays, so `cut` is false.
+
+The best shape maximises stat product rather than CP, so this isn't the highest CP those points could reach.
+
+## 9. Categories
+
+`tags` come from `pipeline/dataset.ts`, and `inCategory` in `src/lib/list.ts` decides what each category shows.
+
+| Category | Rule |
+|---|---|
+| All species | Every form |
+| Legendaries | `legendary` tag, standard pool |
+| Megas + Primals | The `mega` pool |
+| Mythicals | `mythical` tag, standard pool |
+| Starters | `starter` tag, standard pool |
+| Fully evolved | `fully-evolved` tag, standard pool |
+
+- **Legendary and mythical** are PokéAPI's species flags. Ultra Beasts and most Paradox Pokémon aren't flagged legendary, but Koraidon and Miraidon are.
+- **`starter`** marks every form in the evolution chains listed under `starters` in `data/overrides.yaml`. That's 27 lines, with all stages and regional forms. Pikachu and Eevee are left out.
+- **`fully-evolved`** marks a form when nothing evolves from its species. PokéAPI records evolution per species, so forms that can't evolve although their species can are listed under `finalForms`. Corsola is listed, for example, because only Galarian Corsola evolves.
+- **Megas and Primals keep their species' tags,** so the standard-pool rule is what keeps them out of the other categories.
+- **Percentile doesn't change between categories.** It's a form's rank in its pool (§7), so a form shows the same number everywhere.
+
+## 10. Open questions
+
 - **Format lenses** (research doc 1 §3):
   - Great/Ultra League stat product needs a search over IVs and levels under the CP cap.
   - Raids need an Attack-weighted metric.
 - **Shadow variants** (×1.2 Attack, ×0.833 Defense). Only `shadowAvailable` is stored so far.
 - **Non-stat notes** such as lost abilities (Huge Power, Truant, Wonder Guard) and items. These should be an annotation layer, not part of the score.
 
-Resolved in Phase 1: Stamina rounding under an adjustment (§1) and the headline score (§7).
+Resolved in Phase 1: Stamina rounding under an adjustment (§1) and the headline score (§7). Resolved in Phase 2: how the site shows GO Fit ([decision 0006](decisions/0006-astro-site-inline-list-data.md)).
 
 [Bulbapedia, Stat (GO)]: https://bulbapedia.bulbagarden.net/wiki/Stat_(GO)

@@ -1,5 +1,5 @@
 {
-  "name": "pogo-stat-transfer",
+  "name": "pogo-stat-translation",
   "private": true,
   "version": "0.1.0",
   "description": "Judges how well every main-series Pokémon's base stats convert into Pokémon GO.",
@@ -9,6 +9,9 @@
     "node": ">=24"
   },
   "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
     "fetch": "node pipeline/fetch.ts",
     "fetch:update": "node pipeline/fetch.ts --update",
     "build:data": "node pipeline/build.ts",
@@ -17,6 +20,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "astro": "^7.4.7",
     "csv-parse": "^7.0.3",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"
@@ -24,6 +28,7 @@
   "devDependencies": {
     "@types/node": "^24.19.2",
     "oxlint": "^1.91.0",
+    "playwright-core": "^1.65.0",
     "typescript": "~7.0.2"
   }
 }

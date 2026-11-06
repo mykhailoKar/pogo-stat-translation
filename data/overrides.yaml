@@ -17,6 +17,44 @@ excludeForms:
 # Forms kept even if the selection rules would drop them.
 includeForms: []
 
+# First stage of each starter line. Every form in those evolution chains is tagged "starter".
+starters:
+  - species: [bulbasaur, charmander, squirtle]
+    reason: Gen I starters. Pikachu and Eevee are left out, as partners of one game rather than a starter set
+  - species: [chikorita, cyndaquil, totodile]
+    reason: Gen II starters
+  - species: [treecko, torchic, mudkip]
+    reason: Gen III starters
+  - species: [turtwig, chimchar, piplup]
+    reason: Gen IV starters
+  - species: [snivy, tepig, oshawott]
+    reason: Gen V starters
+  - species: [chespin, fennekin, froakie]
+    reason: Gen VI starters
+  - species: [rowlet, litten, popplio]
+    reason: Gen VII starters
+  - species: [grookey, scorbunny, sobble]
+    reason: Gen VIII starters
+  - species: [sprigatito, fuecoco, quaxly]
+    reason: Gen IX starters
+
+# Forms that are fully evolved even though their species evolves. PokéAPI tracks evolution per species.
+finalForms:
+  - id: farfetchd
+    reason: Only Galarian Farfetch'd evolves, into Sirfetch'd
+  - id: mr-mime
+    reason: Only Galarian Mr. Mime evolves, into Mr. Rime
+  - id: qwilfish
+    reason: Only Hisuian Qwilfish evolves, into Overqwil
+  - id: corsola
+    reason: Only Galarian Corsola evolves, into Cursola
+  - id: linoone
+    reason: Only Galarian Linoone evolves, into Obstagoon
+  - id: basculin-red-striped
+    reason: Only White-Striped Basculin evolves, into Basculegion. The dataset keeps Red-Striped to stand for all stripes
+  - id: floette-eternal
+    reason: Eternal Flower Floette can't evolve into Florges
+
 # PvPoke speciesId -> PokéAPI identifier, for ids the automatic matching can't resolve.
 idMap:
   # PvPoke spells these differently

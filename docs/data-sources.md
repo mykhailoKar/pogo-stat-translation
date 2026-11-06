@@ -16,7 +16,7 @@ Files from `data/v2/csv/` and what each provides:
 | File | Use |
 |---|---|
 | `pokemon.csv` | One row per Pokémon or form: identifier, species, default flag, sort order |
-| `pokemon_species.csv` | Dex number, generation, legendary/mythical/baby flags |
+| `pokemon_species.csv` | Dex number, generation, legendary/mythical/baby flags, evolution links |
 | `pokemon_species_names.csv` | English species names (language 9) |
 | `pokemon_forms.csv`, `version_groups.csv` | Generation each form was introduced in (drives the stat era) |
 | `pokemon_form_names.csv` | English display and form names |
