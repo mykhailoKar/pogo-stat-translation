@@ -31,6 +31,7 @@ export interface AboutFigures {
   medianScore: number;
   highestScore: number;
   top: ListRow;
+  cutForms: number;
   newlyCutIdeals: number;
   idealSpeedOne: number;
   wantsMoreSpeed: number;
@@ -111,7 +112,8 @@ export function aboutFigures(dataset: Dataset): AboutFigures {
     medianScore: median.goFit,
     highestScore: highest.goFit,
     top: highest,
-    newlyCutIdeals: rows.filter((row) => row.idealCut).length,
+    cutForms: rows.filter((row) => row.adjustment < 1).length,
+    newlyCutIdeals: rows.filter((row) => row.idealAdjustment < row.adjustment).length,
     idealSpeedOne: rows.filter((row) => row.best.spe === 1).length,
     wantsMoreSpeed: rows.filter((row) => row.best.spe > row.ms.spe).length,
     weakBst: WEAK_BST,

@@ -52,9 +52,9 @@ const commit = (sha: string | undefined) => sha?.slice(0, 7) ?? "unknown";
       <dt>L50 CP now</dt>
       <dd>The form's CP at level 50 with perfect IVs (15/15/15).</dd>
       <dt>L50 CP ideal</dt>
-      <dd>The CP its best shape would have at level 50 with perfect IVs, after GO's own cut. A <strong>Cut</strong> label means the best shape would be strong enough to trigger that cut.</dd>
+      <dd>The CP its best shape would have at level 50 with perfect IVs, after GO's own cut.</dd>
     </dl>
-    <p>A <strong>Predicted</strong> label means the form isn't in GO data yet, so its GO stats come from the formula.</p>
+    <p>A <strong>Cut</strong> label beside a CP means that number includes one of GO's reductions, explained under <a href="#the-cut">The cut</a>. A <strong>Predicted</strong> label means the form isn't in GO data yet, so its GO stats come from the formula.</p>
 
     <h2 id="conversion">How GO converts stats</h2>
     <p>GO's three stats come from the six main-series stats like this:</p>
@@ -68,8 +68,9 @@ Stamina  = 50 + 1.75 × HP</code></pre>
       <li><strong>A second defensive stat counts for more,</strong> at 3/8, but one big defensive stat still beats two medium ones.</li>
       <li><strong>Speed is only a small multiplier.</strong> Each point adds 0.2% to GO Attack and GO Defense.</li>
     </ul>
-    <h3>The cut</h3>
+    <h3 id="the-cut">The cut</h3>
     <p>Very strong Pokémon lose 9%. If a form's stats would reach 4,000 CP at level 40 with perfect IVs, GO multiplies all three stats by 0.91, and Stamina then rounds to the nearest whole number. Megas and Primals skip this rule, although a few of the strongest use a fixed ×0.97 instead.</p>
+    <p>The list marks these reductions with a <strong>Cut</strong> label. Beside L50 CP now, it means GO really does reduce that form, which is true of {figures.cutForms} forms. Beside L50 CP ideal, it means the best shape would be reduced: either the form already is, or its best shape would reach the line. The label follows GO's real stats, and a few unreleased forms don't follow the line: some are cut below it, and others are left uncut above it.</p>
     <h3>Older stats</h3>
     <p>GO doesn't always use a form's current stats. Forms from Gens I–II use their Gen VI stats, and Gens III–VII use their Gen VII stats. Forms from Gen VIII onwards use current stats. The site uses whichever stats GO uses, and says so in a row's details when they differ.</p>
     <p>Together these rules reproduce GO's real stats exactly for {number.format(figures.exact)} of the {number.format(figures.withGoData)} forms with GO data. The remaining {figures.withGoData - figures.exact} are hand-set or rounded differently by GO, and they're listed in the <a href="https://github.com/mykhailoKar/pogo-stat-translation/blob/main/data/reports/validation.md">validation report</a>.</p>
@@ -123,15 +124,15 @@ GO Fit      = {example.actual.atk} × {example.actual.def} ÷ ({example.best.atk
         <thead><tr><th scope="col">Category</th><th scope="col">Forms</th><th scope="col">What's in it</th></tr></thead>
         <tbody>
           <tr><th scope="row">{CATEGORIES[0].label}</th><td>{number.format(counts.all)}</td><td>Every form, including Megas and Primals.</td></tr>
-          <tr><th scope="row">{CATEGORIES[1].label}</th><td>{counts.legendary}</td><td>Forms of species PokéAPI flags as legendary. That leaves out Ultra Beasts and most Paradox Pokémon, though Koraidon and Miraidon count.</td></tr>
+          <tr><th scope="row">{CATEGORIES[1].label}</th><td>{counts.legendary}</td><td>Forms of species PokéAPI flags as legendary, including their Megas and Primals. That leaves out Ultra Beasts and most Paradox Pokémon, though Koraidon and Miraidon count.</td></tr>
           <tr><th scope="row">{CATEGORIES[2].label}</th><td>{counts.mega}</td><td>All Mega Evolutions and Primal Reversions.</td></tr>
-          <tr><th scope="row">{CATEGORIES[3].label}</th><td>{counts.mythical}</td><td>Forms of species PokéAPI flags as mythical.</td></tr>
-          <tr><th scope="row">{CATEGORIES[4].label}</th><td>{counts.starter}</td><td>All 27 starter lines from Gen I to Gen IX, every stage, plus their regional forms. Pikachu and Eevee aren't included.</td></tr>
-          <tr><th scope="row">{CATEGORIES[5].label}</th><td>{counts["fully-evolved"]}</td><td>Forms that can't evolve further, including Pokémon with no evolutions at all. Regular Corsola counts, for example, though Galarian Corsola doesn't.</td></tr>
+          <tr><th scope="row">{CATEGORIES[3].label}</th><td>{counts.mythical}</td><td>Forms of species PokéAPI flags as mythical, including their Megas.</td></tr>
+          <tr><th scope="row">{CATEGORIES[4].label}</th><td>{counts.starter}</td><td>All 27 starter lines from Gen I to Gen IX, every stage, plus their regional forms and Megas. Pikachu and Eevee aren't included.</td></tr>
+          <tr><th scope="row">{CATEGORIES[5].label}</th><td>{counts["fully-evolved"]}</td><td>Forms that can't evolve further, including Megas, Primals and Pokémon with no evolutions at all. Regular Corsola counts, for example, though Galarian Corsola doesn't.</td></tr>
         </tbody>
       </table>
     </div>
-    <p>Megas and Primals only appear under All species and their own category, so the other categories compare like with like. Gigantamax, Totem and purely cosmetic forms are left out.</p>
+    <p>A Mega or Primal keeps the percentile from its own ranking in every category, so its percentile compares it with other Megas and Primals only. Gigantamax, Totem and purely cosmetic forms are left out.</p>
 
     <h2 id="limits">What GO Fit doesn't tell you</h2>
     <ul>

@@ -60,8 +60,8 @@ export interface GoFit {
 export interface IdealInGo extends GoStats {
   /** CP at level 50 with 15/15/15 IVs. */
   cpL50: number;
-  /** True when the best shape takes a cut that the form itself doesn't. */
-  cut: boolean;
+  /** GO's multiplier on the best shape. Below 1 means it's cut, whether or not the form itself is. */
+  adjustment: number;
 }
 
 export type Pool = "standard" | "mega";

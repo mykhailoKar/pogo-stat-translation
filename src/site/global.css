@@ -395,7 +395,8 @@ th[aria-sort="descending"] .arrow::after {
   text-align: left;
 }
 
-/* Wide enough for a four-digit CP and its Cut label. */
+/* Wide enough for a five-digit CP and its Cut label. */
+.list .col-cpNow,
 .list .col-cpIdeal {
   width: 12.5%;
 }

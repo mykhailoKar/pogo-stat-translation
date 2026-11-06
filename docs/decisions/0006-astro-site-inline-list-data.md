@@ -13,7 +13,7 @@ Phase 2 is a list of 1,250 forms that sorts, filters and searches, plus an About
 - **Slim rows go inline in the HTML as JSON.** The page is about 100 KB gzipped, against 187 KB for the full dataset, and the list needs no second request. The full `pokemon.json` is still published for anyone who wants it.
 - **One table, two layouts.** At 760px and wider it's a table with a sticky header. Below that, CSS turns the same rows into cards, and a sort menu replaces the column headings. There's no second copy of the markup to keep in step.
 - **The table uses a fixed layout,** so columns don't shift as rows are filtered.
-- **Megas and Primals only appear under All species and their own category.** They keep their species' tags, so `inCategory` restricts the other categories to the standard pool.
+- **Megas and Primals appear in their own category and in every category their species belongs to.** They keep their species' tags, so Mega Rayquaza is also a Legendary and Mega Charizard X also a Starter. Every one counts as fully evolved.
 - **Percentile doesn't change between categories.** It's a form's rank in its pool, so a form shows the same number everywhere.
 - **Figures on the About page come from `src/lib/about-figures.ts`,** not the page. `tsc` doesn't read `.astro` files, so code in them has no type checks or tests. A wrong call in the page once printed a worked example that didn't add up, and every check still passed. A test now redoes the printed arithmetic.
 - **No sprites.** The art belongs to Nintendo, so the logo and favicon are original and the list is text only.

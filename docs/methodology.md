@@ -162,7 +162,7 @@ GO Fit      = Attack Fit × Defense Fit × Speed Fit
 ```
 ideal = convert goFit.best.ms with §1, using the form's real rule from §2
 cpL50 = CP of ideal at level 50 with 15/15/15 (§5)
-cut   = true when ideal's adjustment is lower than the form's own
+adjustment = the multiplier GO would apply to that shape
 ```
 
 This is the one place the best shape re-tests the 4,000 CP line. GO Fit itself doesn't (§7): it compares both shapes under the form's own multiplier, so a score reflects shape alone.
@@ -170,10 +170,19 @@ This is the one place the best shape re-tests the 4,000 CP line. GO Fit itself d
 - **458 forms are newly cut,** and none falls below its current CP, so no form needs special handling.
 - **Garchomp:** 4,479 now, 6,179 ideal at 359/221/217. It would be 7,411 without the cut.
 - **Mew:** 3,691 now, 5,971 ideal, also cut.
-- **Slaking:** 5,010 now, 7,822 ideal. It's already cut, so `cut` is false.
-- **Mega Rayquaza:** 6,458 now, 10,815 ideal. Its fixed ×0.97 stays, so `cut` is false.
+- **Slaking:** 5,010 now, 7,822 ideal. It's already cut, and its ideal keeps the ×0.91.
+- **Mega Rayquaza:** 6,458 now, 10,815 ideal. Its fixed ×0.97 stays.
 
 The best shape maximises stat product rather than CP, so this isn't the highest CP those points could reach.
+
+**The Cut label** sits beside any CP on the site that includes a reduction, so it depends only on the multiplier:
+
+| Column | Shown when | Forms |
+|---|---|---:|
+| L50 CP now | `goPredicted.steps.adjustment` < 1 | 62 (56 at ×0.91, 6 at ×0.97) |
+| L50 CP ideal | `goFit.ideal.adjustment` < 1 | 520 (those 62, plus the 458 newly cut) |
+
+Both multipliers reproduce GO's real stats (§4), so the label follows the game rather than the 4,000 CP line alone. Ten unreleased forms are cut below the line, and four are left uncut above it (§2).
 
 ## 9. Categories
 
@@ -182,17 +191,17 @@ The best shape maximises stat product rather than CP, so this isn't the highest 
 | Category | Rule |
 |---|---|
 | All species | Every form |
-| Legendaries | `legendary` tag, standard pool |
+| Legendaries | `legendary` tag |
 | Megas + Primals | The `mega` pool |
-| Mythicals | `mythical` tag, standard pool |
-| Starters | `starter` tag, standard pool |
-| Fully evolved | `fully-evolved` tag, standard pool |
+| Mythicals | `mythical` tag |
+| Starters | `starter` tag |
+| Fully evolved | `fully-evolved` tag |
 
 - **Legendary and mythical** are PokéAPI's species flags. Ultra Beasts and most Paradox Pokémon aren't flagged legendary, but Koraidon and Miraidon are.
 - **`starter`** marks every form in the evolution chains listed under `starters` in `data/overrides.yaml`. That's 27 lines, with all stages and regional forms. Pikachu and Eevee are left out.
-- **`fully-evolved`** marks a form when nothing evolves from its species. PokéAPI records evolution per species, so forms that can't evolve although their species can are listed under `finalForms`. Corsola is listed, for example, because only Galarian Corsola evolves.
-- **Megas and Primals keep their species' tags,** so the standard-pool rule is what keeps them out of the other categories.
-- **Percentile doesn't change between categories.** It's a form's rank in its pool (§7), so a form shows the same number everywhere.
+- **`fully-evolved`** marks a form when nothing evolves from its species, and every Mega and Primal. PokéAPI records evolution per species, so forms that can't evolve although their species can are listed under `finalForms`. Corsola is listed, for example, because only Galarian Corsola evolves.
+- **Megas and Primals keep their species' tags,** so Mega Rayquaza appears under Legendaries, Mega Charizard X under Starters, and both under Fully evolved.
+- **Percentile doesn't change between categories.** It's a form's rank in its pool (§7), so a form shows the same number everywhere, and a Mega's percentile compares it with other Megas and Primals only.
 
 ## 10. Open questions
 

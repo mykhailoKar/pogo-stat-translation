@@ -21,8 +21,10 @@ export interface ListRow {
   speedFit: number;
   cpNow: number;
   cpIdeal: number;
-  /** True when GO's ×0.91 cut applies to the best shape but not to the form. */
-  idealCut: boolean;
+  /** GO's multiplier on this form's stats. Below 1 means GO cuts the form. */
+  adjustment: number;
+  /** GO's multiplier on the best shape, which can be cut even when the form isn't. */
+  idealAdjustment: number;
   /** The stats GO converts from. */
   ms: MsStats;
   /** The generation of those stats, when GO uses an older era than the current games. */
@@ -92,7 +94,8 @@ export function toListRow(p: DatasetEntry): ListRow {
     speedFit: p.goFit.speedFit,
     cpNow: p.metrics.cp.l50,
     cpIdeal: ideal.cpL50,
-    idealCut: ideal.cut,
+    adjustment: p.goPredicted.steps.adjustment,
+    idealAdjustment: ideal.adjustment,
     ms: { hp, atk, def, spa, spd, spe },
     msGen: gen,
     best: best.ms,
@@ -102,11 +105,11 @@ export function toListRow(p: DatasetEntry): ListRow {
   };
 }
 
-/** Megas and Primals only appear under All species and their own category. */
+/** Megas and Primals keep their species' tags, so they appear in those categories as well as their own. */
 export function inCategory(row: ListRow, category: CategoryId): boolean {
   if (category === "all") return true;
   if (category === "mega") return row.pool === "mega";
-  return row.pool === "standard" && row.tags.includes(category);
+  return row.tags.includes(category);
 }
 
 export function categoryCounts(rows: readonly ListRow[]): Record<CategoryId, number> {

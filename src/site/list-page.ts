@@ -58,7 +58,8 @@ function goRow(label: string, go: GoStats): string {
 
 function detailNotes(row: ListRow): string {
   const notes: string[] = [];
-  if (row.idealCut) notes.push("The best shape would cross GO's 4,000 CP line, so its GO stats and CP ideal include the ×0.91 cut. GO Fit leaves that cut out.");
+  if (row.adjustment < 1) notes.push(`GO multiplies this form's stats by ${row.adjustment}, and its best shape keeps that cut.`);
+  else if (row.idealAdjustment < 1) notes.push(`The best shape would cross GO's 4,000 CP line, so its GO stats and CP ideal include the ×${row.idealAdjustment} cut. GO Fit leaves that cut out.`);
   if (row.msGen !== null) notes.push(`GO still uses this form's Gen ${row.msGen} stats, so they differ from the current games.`);
   if (row.predicted) notes.push("This form isn't in GO data yet, so its GO stats are the formula's prediction.");
   if (row.note) notes.push(escapeHtml(row.note));
@@ -85,11 +86,15 @@ function detailHtml(row: ListRow): string {
   </div>${notes ? `<ul class="detail-notes">${notes}</ul>` : ""}<a class="detail-link" href="${baseUrl}about/#go-fit">How this is calculated</a></td></tr>`;
 }
 
+/** Sits beside any CP that includes one of GO's reductions. */
+function cutBadge(adjustment: number): string {
+  return adjustment < 1 ? `<span class="badge" title="Includes GO's ×${adjustment} cut">Cut</span>` : "";
+}
+
 function rowHtml(row: ListRow): string {
   const isOpen = open.has(row.id);
   const types = row.types.map(capitalize).join(" / ");
   const predicted = row.predicted ? `<span class="badge" title="Not in GO data yet; GO stats are predicted">Predicted</span>` : "";
-  const cut = row.idealCut ? `<span class="badge" title="Includes GO's ×0.91 cut">Cut</span>` : "";
   const line = `<tr class="row" data-id="${row.id}">
     <td class="col-dex">${row.dex}</td>
     <th scope="row" class="col-name"><button type="button" class="name" aria-expanded="${isOpen}"><span class="chevron" aria-hidden="true"></span><span class="name-text">${escapeHtml(row.name)}</span></button><span class="types">${types}</span>${predicted}</th>
@@ -98,8 +103,8 @@ function rowHtml(row: ListRow): string {
     <td data-label="Attack Fit">${percent(row.attackFit)}</td>
     <td data-label="Defense Fit">${percent(row.defenseFit)}</td>
     <td data-label="Speed Fit">${percent(row.speedFit)}</td>
-    <td data-label="L50 CP now">${number.format(row.cpNow)}</td>
-    <td data-label="L50 CP ideal">${number.format(row.cpIdeal)}${cut}</td>
+    <td data-label="L50 CP now">${number.format(row.cpNow)}${cutBadge(row.adjustment)}</td>
+    <td data-label="L50 CP ideal">${number.format(row.cpIdeal)}${cutBadge(row.idealAdjustment)}</td>
   </tr>`;
   return isOpen ? line + detailHtml(row) : line;
 }

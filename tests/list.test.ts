@@ -23,7 +23,7 @@ function row(id: string, dex: number, name: string, opts: Partial<ListRow> = {})
     id, dex, name, species: name,
     types: ["normal"], tags: [], pool: "standard", predicted: false,
     goFit: 50, percentile: 50, attackFit: 50, defenseFit: 50, speedFit: 50,
-    cpNow: 1000, cpIdeal: 2000, idealCut: false,
+    cpNow: 1000, cpIdeal: 2000, adjustment: 1, idealAdjustment: 1,
     ms: stats, msGen: null, best: stats, go, ideal: go, note: null,
     ...opts,
   };
@@ -47,22 +47,26 @@ describe("categories", () => {
     assert.equal(filterRows(rows, state({ category: "all" })).length, rows.length);
   });
 
-  it("keeps Megas and Primals in their own category", () => {
+  it("gives Megas and Primals a category of their own", () => {
     assert.deepEqual(ids(filterRows(rows, state({ category: "mega" }))), ["charizard-mega-x", "kyogre-primal"]);
-    assert.equal(inCategory(primal, "legendary"), false);
-    assert.equal(inCategory(megaCharizard, "starter"), false);
-    assert.equal(inCategory(megaCharizard, "fully-evolved"), false);
+  });
+
+  it("also lists Megas and Primals under their species' categories", () => {
+    assert.ok(inCategory(primal, "legendary"));
+    assert.ok(inCategory(megaCharizard, "starter"));
+    assert.ok(inCategory(megaCharizard, "fully-evolved"));
+    assert.equal(inCategory(megaCharizard, "legendary"), false);
   });
 
   it("selects by tag for the rest", () => {
-    assert.deepEqual(ids(filterRows(rows, state({ category: "legendary" }))), ["mewtwo"]);
+    assert.deepEqual(ids(filterRows(rows, state({ category: "legendary" }))), ["mewtwo", "kyogre-primal"]);
     assert.deepEqual(ids(filterRows(rows, state({ category: "mythical" }))), ["mew"]);
-    assert.deepEqual(ids(filterRows(rows, state({ category: "starter" }))), ["charizard", "charmander"]);
-    assert.deepEqual(ids(filterRows(rows, state({ category: "fully-evolved" }))), ["charizard", "mewtwo", "mew"]);
+    assert.deepEqual(ids(filterRows(rows, state({ category: "starter" }))), ["charizard", "charizard-mega-x", "charmander"]);
+    assert.deepEqual(ids(filterRows(rows, state({ category: "fully-evolved" }))), ["charizard", "charizard-mega-x", "mewtwo", "mew", "kyogre-primal"]);
   });
 
   it("counts each category", () => {
-    assert.deepEqual(categoryCounts(rows), { all: 8, legendary: 1, mega: 2, mythical: 1, starter: 2, "fully-evolved": 3 });
+    assert.deepEqual(categoryCounts(rows), { all: 8, legendary: 2, mega: 2, mythical: 1, starter: 3, "fully-evolved": 5 });
   });
 });
 

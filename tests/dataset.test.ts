@@ -5,6 +5,7 @@ import path from "node:path";
 import { before, describe, it } from "node:test";
 import { buildDataset, serializeDataset, type BuildResult } from "../pipeline/dataset.ts";
 import { ROOT, SOURCES, pinnedFile, type SourceName } from "../pipeline/sources.ts";
+import { categoryCounts, toListRow, type ListRow } from "../src/lib/list.ts";
 import type { DatasetEntry } from "../src/lib/types.ts";
 
 let result: BuildResult;
@@ -126,13 +127,14 @@ describe("GO Fit on real data", () => {
     // Garchomp's best shape is 395/243/239 uncut. That's over the line, so GO would cut it to 359/221/217.
     const { best, ideal } = fitOf("garchomp");
     assert.deepEqual(best.go, { atk: 395, def: 243, sta: 239 });
-    assert.deepEqual(ideal, { atk: 359, def: 221, sta: 217, cpL50: 6179, cut: true });
+    assert.deepEqual(ideal, { atk: 359, def: 221, sta: 217, cpL50: 6179, adjustment: 0.91 });
   });
 
-  it("doesn't flag forms that are already cut, or re-test Megas", () => {
-    assert.deepEqual(fitOf("slaking").ideal, { atk: 425, def: 197, sta: 284, cpL50: 7822, cut: false });
-    assert.equal(fitOf("rayquaza-mega").ideal.cut, false);
+  it("keeps the cut on forms that already take one, and doesn't re-test Megas", () => {
+    assert.deepEqual(fitOf("slaking").ideal, { atk: 425, def: 197, sta: 284, cpL50: 7822, adjustment: 0.91 });
+    assert.equal(fitOf("rayquaza-mega").ideal.adjustment, 0.97);
     assert.equal(fitOf("rayquaza-mega").ideal.cpL50, 10815);
+    assert.equal(fitOf("charizard-mega-x").ideal.adjustment, 1);
   });
 
   it("never puts the ideal below a form's current CP", () => {
@@ -140,9 +142,63 @@ describe("GO Fit on real data", () => {
   });
 });
 
+describe("the Cut label", () => {
+  const rowOf = (id: string): ListRow => toListRow(byId.get(id) as DatasetEntry);
+  const cuts = (id: string): [number, number] => [rowOf(id).adjustment, rowOf(id).idealAdjustment];
+
+  it("marks forms GO cuts, in both columns", () => {
+    for (const id of ["slaking", "mewtwo", "necrozma-ultra", "necrozma-dusk", "walking-wake"]) assert.deepEqual(cuts(id), [0.91, 0.91], id);
+    for (const id of ["rayquaza-mega", "kyogre-primal", "mewtwo-mega-x"]) assert.deepEqual(cuts(id), [0.97, 0.97], id);
+  });
+
+  it("marks only the ideal when only the best shape would be cut", () => {
+    for (const id of ["garchomp", "necrozma", "mew"]) assert.deepEqual(cuts(id), [1, 0.91], id);
+  });
+
+  it("leaves uncut forms alone, including those GO's data exempts from the line", () => {
+    for (const id of ["bulbasaur", "charizard-mega-x", "great-tusk", "iron-hands", "roaring-moon", "palafin-hero"]) assert.deepEqual(cuts(id), [1, 1], id);
+  });
+
+  it("matches GO's real stats for every form with GO data", () => {
+    for (const p of result.dataset.pokemon) {
+      if (p.go.status !== "actual" || p.exception) continue;
+      const { adjustment, uncut } = p.goPredicted.steps;
+      assert.equal(p.go.atk < uncut.atk, adjustment < 1, p.id);
+    }
+  });
+
+  it("never lets a form's best shape escape a cut the form takes", () => {
+    for (const p of result.dataset.pokemon) assert.ok(p.goFit.ideal.adjustment <= p.goPredicted.steps.adjustment, p.id);
+  });
+
+  it("counts the forms the methodology quotes", () => {
+    const rows = result.dataset.pokemon.map(toListRow);
+    assert.equal(rows.filter((row) => row.adjustment === 0.91).length, 56);
+    assert.equal(rows.filter((row) => row.adjustment === 0.97).length, 6);
+    assert.equal(rows.filter((row) => row.idealAdjustment < 1).length, 520);
+  });
+});
+
 describe("category tags", () => {
   const tagged = (tag: string): DatasetEntry[] =>
     result.dataset.pokemon.filter((p) => p.ranks.pool === "standard" && p.tags.includes(tag));
+
+  it("counts every category, with Megas and Primals in theirs", () => {
+    const counts = categoryCounts(result.dataset.pokemon.map(toListRow));
+    assert.deepEqual(counts, { all: 1250, legendary: 105, mega: 95, mythical: 34, starter: 98, "fully-evolved": 770 });
+  });
+
+  it("counts every Mega and Primal as fully evolved", () => {
+    for (const p of result.dataset.pokemon) {
+      if (p.ranks.pool === "mega") assert.ok(p.tags.includes("fully-evolved"), p.id);
+    }
+  });
+
+  it("gives Megas and Primals their species' categories", () => {
+    for (const id of ["rayquaza-mega", "kyogre-primal", "heatran-mega"]) assert.ok(byId.get(id)?.tags.includes("legendary"), id);
+    for (const id of ["diancie-mega", "darkrai-mega"]) assert.ok(byId.get(id)?.tags.includes("mythical"), id);
+    for (const id of ["charizard-mega-x", "greninja-mega", "meganium-mega"]) assert.ok(byId.get(id)?.tags.includes("starter"), id);
+  });
 
   it("covers all 27 starter lines and their regional forms", () => {
     assert.equal(tagged("starter").length, 85);

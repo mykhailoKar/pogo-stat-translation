@@ -76,7 +76,7 @@ function tagsOf(f: MsForm, starterChains: Set<number>, finalForms: Set<string>):
   if (f.isPrimal) tags.push("primal");
   if (f.isRegional) tags.push("regional");
   if (starterChains.has(f.evolutionChain)) tags.push("starter");
-  if (!f.speciesEvolves || finalForms.has(f.id)) tags.push("fully-evolved");
+  if (!f.speciesEvolves || f.isMega || f.isPrimal || finalForms.has(f.id)) tags.push("fully-evolved");
   return tags;
 }
 
@@ -171,7 +171,7 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
           def: ideal.def,
           sta: ideal.sta,
           cpL50: cp(ideal, 50),
-          cut: ideal.steps.adjustment < predicted.steps.adjustment,
+          adjustment: ideal.steps.adjustment,
         },
       },
       ranks: { pool, bstPct: 0, cpL50Pct: 0, spL50Pct: 0, goFitPct: 0 },
