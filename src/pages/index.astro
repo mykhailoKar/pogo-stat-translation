@@ -49,13 +49,12 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
       <button type="button" id="list-direction">Descending</button>
     </div>
     <p class="count" id="list-count" role="status">{number.format(rows.length)} forms</p>
+    <p class="hint">CP is at level 50 with perfect IVs. <a href={`${home}about/`}>How it's calculated</a></p>
   </div>
-
-  <p class="hint">CP is at level 50 with perfect IVs. <a href={`${home}about/`}>How it's calculated</a></p>
 
   <noscript><p>This list needs JavaScript. The <a href={`${home}about/`}>About page</a> works without it, and the data is available as <a href={`${home}data/pokemon.json`}>JSON</a>.</p></noscript>
 
-  <table class="list">
+  <table class="list" id="list-table">
     <caption class="sr-only">GO Fit for each Pokémon form. Select a column heading to sort, or a row to see its stats.</caption>
     <thead id="list-head">
       <tr>
@@ -74,6 +73,8 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
     </thead>
     <tbody id="list-body" data-base={home}></tbody>
   </table>
+
+  <nav class="pager" id="list-pager" aria-label="Pages" hidden></nav>
 
   <div class="empty" id="list-empty" hidden>
     <p>No forms match that search.</p>

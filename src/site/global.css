@@ -87,7 +87,7 @@ a {
 .site-header {
   display: flex;
   justify-content: center;
-  padding: 24px 16px 12px;
+  padding: 16px 16px 8px;
 }
 
 .logo {
@@ -146,8 +146,8 @@ main {
 /* List page */
 
 .intro {
-  max-width: 60ch;
-  margin: 8px auto 20px;
+  max-width: 58rem;
+  margin: 0 auto 14px;
   text-align: center;
 }
 
@@ -164,7 +164,7 @@ main {
 }
 
 .categories {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   padding: 0;
   border: 0;
 }
@@ -294,7 +294,7 @@ input[type="search"]::placeholder {
 }
 
 .hint {
-  margin: 0 0 12px;
+  margin: 0;
   color: var(--muted);
   font-size: 0.84rem;
 }
@@ -313,7 +313,7 @@ input[type="search"]::placeholder {
 
 .list th,
 .list td {
-  padding: 9px 8px;
+  padding: 7px 8px;
   border-bottom: 1px solid var(--line);
   text-align: right;
   font-weight: 400;
@@ -351,7 +351,7 @@ input[type="search"]::placeholder {
   align-items: baseline;
   gap: 3px;
   width: 100%;
-  padding: 10px 8px;
+  padding: 8px;
   border: 0;
   background: none;
   color: var(--muted);
@@ -535,6 +535,86 @@ th[aria-sort="descending"] .arrow::after {
   font-size: 0.86rem;
 }
 
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.pager[hidden] {
+  display: none;
+}
+
+.pager button {
+  min-width: 42px;
+  min-height: 42px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.pager button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.pager button:disabled {
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: default;
+}
+
+.pager button[aria-current="page"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.pages {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pages .gap {
+  align-self: center;
+  width: 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.page-status {
+  display: none;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Seven numbers stop fitting beside Previous and Next, so the pager says where you are instead. */
+@media (max-width: 519px) {
+  .pager {
+    justify-content: space-between;
+  }
+
+  .pages {
+    display: none;
+  }
+
+  .page-status {
+    display: block;
+  }
+}
+
 .empty {
   padding: 32px 16px;
   text-align: center;
@@ -565,7 +645,7 @@ th[aria-sort="descending"] .arrow::after {
   }
 
   .hint {
-    margin-bottom: 0;
+    flex-basis: 100%;
   }
 
   .list,
@@ -588,8 +668,6 @@ th[aria-sort="descending"] .arrow::after {
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);
-    content-visibility: auto;
-    contain-intrinsic-size: auto 158px;
   }
 
   .row:hover > * {
@@ -673,6 +751,14 @@ th[aria-sort="descending"] .arrow::after {
 
   .list .col-dex {
     width: 2.7rem;
+  }
+}
+
+/* With room to spare, a form's types share its name's line, so ten rows and the pager fit a laptop screen. */
+@media (min-width: 1100px) {
+  .types {
+    display: inline;
+    padding-left: 8px;
   }
 }
 

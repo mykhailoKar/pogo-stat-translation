@@ -1,6 +1,6 @@
 ---
 name: run-pogo-stat-translation
-description: Build, run, drive, test and screenshot the pogo-stat-translation site, an Astro list of Pokémon GO Fit scores with a data pipeline behind it. Use when asked to start or run the site, take a screenshot, check it at phone, tablet or desktop sizes, confirm a UI change in a real browser, try sorting, categories, search, row details, URL state, dark mode or the About page, or rebuild and test the dataset.
+description: Build, run, drive, test and screenshot the pogo-stat-translation site, an Astro list of Pokémon GO Fit scores with a data pipeline behind it. Use when asked to start or run the site, take a screenshot, check it at phone, tablet or desktop sizes, confirm a UI change in a real browser, try sorting, categories, search, paging, row details, URL state, dark mode or the About page, or rebuild and test the dataset.
 ---
 
 A static Astro site with a Node data pipeline. Drive the site with `.claude/skills/run-pogo-stat-translation/driver.mjs`. It builds the site, serves it on a private port, runs a real browser and shuts everything down when it exits, so there's no server to start or stop.
@@ -65,6 +65,8 @@ It prints each step's result, then any console or network errors, which also mak
 | `flip` | Reverses the sort |
 | `search <text>` | Types in the search box |
 | `open <id>` | Opens or closes a row, such as `open garchomp` |
+| `next`, `prev` | Moves one page |
+| `page <n>` | Goes to a page. Uses its number if the pager shows it, otherwise walks there with `next` or `prev` |
 | `rows [n]` | Prints the first rows (default 5) |
 | `count`, `url`, `overflow` | Print the count line, the URL, and how far the page overflows sideways |
 | `goto <path>` | Relative to the site, such as `goto about/` or `goto ?category=mega&q=char` |
@@ -118,11 +120,11 @@ npm run build:data && npm test && npm run lint && npm run typecheck && npm run b
 
 ## Gotchas
 
-- **`page.url()` is stale in your own Playwright code.** The list writes its state with `history.replaceState`, and `page.url()` updates a moment later. Read `location.href` with `page.evaluate`, as the driver does. This silently lost a search term.
-- **`innerText` can come back blank on phone widths.** Off-screen cards use `content-visibility`, so read `textContent`.
+- **`page.url()` is stale in your own Playwright code.** The list writes its state with `history.replaceState`, and `page.url()` updates a moment later. Changing page uses `pushState`, so `page.goBack()` returns to the page before. Read `location.href` with `page.evaluate`, as the driver does. This silently lost a search term.
 - **`localhost` differs by OS.** On Linux, Astro binds it to `::1` only, and Node's `fetch` tries `127.0.0.1` and is refused, while `curl` still works. The driver avoids this by passing `--host 127.0.0.1`.
 - **`sort` on the current column does nothing,** so `sort goFit` is safe to repeat. Clicking that heading in the page flips it, and `flip` does the same.
-- **`open <id>` only finds rows on screen.** Search or change category first, and the id is the form's dataset id, such as `rayquaza-mega`.
+- **`open <id>` only finds rows on the current page.** There are 10 per page, so search first. The id is the form's dataset id, such as `rayquaza-mega`.
+- **For a far page, use `goto ?page=50`.** `page 50` from page 1 clicks Next 49 times, because the pager only shows nearby numbers.
 - **Percentile doesn't change between categories,** and Megas are ranked among themselves. Two forms showing 100.0 isn't a bug.
 - **Name sort uses the species,** so Mega Charizard X sits next to Charizard and the visible names won't look alphabetical.
 - **Headings look thin in a Linux container.** The page falls back to WenQuanYi Zen Hei there, which has no bold, although the CSS still says 700. It isn't a site bug, so judge layout from those screenshots, not type weight.

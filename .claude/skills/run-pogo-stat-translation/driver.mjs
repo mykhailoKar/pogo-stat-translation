@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright-core";
 import config from "../../../astro.config.mjs";
-import { COLUMNS, DEFAULT_STATE, categoryCounts, filterRows, sortRows, stateFromParams, toListRow } from "../../../src/lib/list.ts";
+import { COLUMNS, DEFAULT_STATE, PAGE_SIZE, categoryCounts, filterRows, pageCount, pageRows, sortRows, stateFromParams, toListRow } from "../../../src/lib/list.ts";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const ASTRO = join(ROOT, "node_modules", "astro", "bin", "astro.mjs");
@@ -187,6 +187,20 @@ const STEPS = {
   async open(view, id) {
     await view.page.locator(`tr.row[data-id="${id}"] button.name`).click();
   },
+  next: (view) => view.page.click('#list-pager [data-step="next"]'),
+  prev: (view) => view.page.click('#list-pager [data-step="prev"]'),
+  /** Uses the page's number when the pager shows it, and otherwise walks there with Next or Previous. */
+  async page(view, target) {
+    const want = Number(target);
+    const link = view.page.locator(`#list-pager .pages button[data-page="${want}"]`);
+    if (await link.isVisible()) {
+      await link.click();
+      return;
+    }
+    for (let now = (await urlState(view.page)).page; now !== want; now = (await urlState(view.page)).page) {
+      await (now < want ? STEPS.next(view) : STEPS.prev(view));
+    }
+  },
   async rows(view, limit = "5") {
     const lines = await view.page.$$eval(
       "#list-body tr.row",
@@ -256,11 +270,12 @@ function visible(partial) {
   const state = { ...DEFAULT_STATE, ...partial };
   return sortRows(filterRows(rows, state), state);
 }
+const onPage = (partial, number = 1) => pageRows(visible(partial), number).map((row) => row.name);
 const forms = (total) => `${total.toLocaleString("en")} ${total === 1 ? "form" : "forms"}`;
-// textContent, not innerText: content-visibility can leave off-screen cards blank to innerText.
 const firstName = (page) => page.locator("#list-body tr.row .name-text").first().textContent();
 const allNames = (page) => page.locator("#list-body tr.row .name-text").allTextContents();
 const countText = (page) => page.locator("#list-count").textContent();
+const pageNumber = async (page) => (await urlState(page)).page;
 
 /** Everything that doesn't depend on the theme, so it only runs once per size. */
 async function checkControls(view, label) {
@@ -302,9 +317,9 @@ async function checkControls(view, label) {
 
   for (const query of ["flabebe", "6", "farfetchd"]) {
     await STEPS.search(view, query);
-    const want = visible({ query }).map((row) => row.name);
+    const want = onPage({ query });
     check(`search "${query}"`, want.length > 0 && String(await allNames(page)) === String(want), String(await allNames(page)));
-    check(`search "${query}": count`, (await countText(page)) === forms(want.length), await countText(page));
+    check(`search "${query}": count`, (await countText(page)) === forms(visible({ query }).length), await countText(page));
     check(`search "${query}": in the URL`, (await urlState(page)).query === query, await href(page));
   }
   await STEPS.search(view, "zzzz");
@@ -333,26 +348,108 @@ async function checkControls(view, label) {
 
   if (view.size.touch) {
     const small = await page.evaluate(() =>
-      [...document.querySelectorAll(".pill span, #list-search, #list-sort, #list-direction, .site-footer a")]
+      [...document.querySelectorAll(".pill span, #list-search, #list-sort, #list-direction, #list-pager button, .site-footer a")]
         .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height < 38)
         .map((el) => `${el.tagName} ${el.textContent.trim().slice(0, 20)} ${Math.round(el.getBoundingClientRect().height)}`),
     );
     check("touch targets are large enough", small.length === 0, small.join(", "));
   }
+}
 
-  if (!cards) {
-    await page.evaluate(() => window.scrollTo(0, 1500));
-    await page.waitForTimeout(100);
-    const top = await page.locator("#list-head th").first().boundingBox();
-    check("header stays visible while scrolling", top.y >= -1 && top.y < 5, `y=${top.y}`);
-    await shot("scrolled");
+/** The list's paging, through the controls a visitor uses. */
+async function checkPaging(view, label) {
+  const { page, base } = view;
+  const showing = async (name, want) => {
+    const names = await allNames(page);
+    check(name, String(names) === String(want), String(names));
+  };
+
+  check("the first page can't go back", await page.locator('#list-pager [data-step="prev"]').isDisabled());
+  await STEPS.next(view);
+  await showing("Next shows page 2", onPage({}, 2));
+  check("page 2 is in the URL", (await pageNumber(page)) === 2, await href(page));
+  check("Next keeps keyboard focus", await page.evaluate(() => document.activeElement?.dataset.step === "next"));
+  const top = await page.locator("#list-table").boundingBox();
+  check("the list's top is on screen after paging", top.y >= -1 && top.y < view.size.height, `y=${top.y}`);
+  check("no overflow with the pager showing", (await overflow(page)) <= 0, `${await overflow(page)}px`);
+  await page.locator("#list-pager").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(view.out, `${label}-pager.png`) });
+
+  await page.goBack();
+  await page.waitForFunction(() => !location.search.includes("page="));
+  await showing("Back returns to page 1", onPage({}, 1));
+
+  await STEPS.page(view, "3");
+  await showing("going to page 3", onPage({}, 3));
+  if (await page.locator(".pages").isVisible()) {
+    const current = await page.locator('#list-pager [aria-current="page"]').textContent();
+    check("the pager marks the current page", current === "3", current);
+  } else {
+    const status = await page.locator(".page-status").textContent();
+    check("the pager says which page this is", status === `Page 3 of ${pageCount(rows.length)}`, status);
   }
+
+  // Legendaries doesn't divide evenly, so its last page shows a remainder.
+  const category = "legendary";
+  const last = pageCount(counts[category]);
+  await goTo(view, `${base}?category=${category}&page=${last}`);
+  await showing("the URL restores a page, with the remainder on the last", onPage({ category }, last));
+  check("the last page can't go forward", await page.locator('#list-pager [data-step="next"]').isDisabled());
+  check("the last page is short", (await allNames(page)).length === counts[category] % PAGE_SIZE, String((await allNames(page)).length));
+
+  await goTo(view, `${base}?category=${category}&page=9999`);
+  check("a page past the end falls back to the last", (await pageNumber(page)) === last, await href(page));
+  await goTo(view, `${base}?page=nonsense`);
+  check("a bad page falls back to the first", (await pageNumber(page)) === 1, await href(page));
+
+  const resets = {
+    "a new category": () => STEPS.category(view, "mega"),
+    "a new sort": () => STEPS.sort(view, "dex"),
+    "reversing the sort": () => STEPS.flip(view),
+    "a search": () => STEPS.search(view, "a"),
+  };
+  for (const [name, change] of Object.entries(resets)) {
+    await goTo(view, `${base}?page=4`);
+    await change();
+    check(`${name} returns to page 1`, (await pageNumber(page)) === 1, await href(page));
+  }
+
+  await goTo(view, `${base}?q=garchomp`);
+  check("one page of results hides the pager", !(await page.locator("#list-pager").isVisible()));
+  await goTo(view, base);
+}
+
+/** Compares every label with the data, on the pages most likely to break: cut forms, exempt forms and the highest CPs. */
+async function checkCutLabels(view, label) {
+  const { page, base } = view;
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const title = (adjustment) => (adjustment < 1 ? `Includes GO's ×${adjustment} cut` : "");
+
+  for (const search of ["?sort=cpIdeal", "?sort=cpNow", "?q=necrozma", "?q=mewtwo", "?q=rayquaza", "?q=great%20tusk", "?q=garchomp", "?q=bulbasaur", ""]) {
+    await goTo(view, `${base}${search}`);
+    const shown = await page.$$eval("#list-body tr.row", (trs) =>
+      trs.map((tr) => ({
+        id: tr.dataset.id,
+        now: tr.querySelector('td[data-label="L50 CP now"] .badge')?.title ?? "",
+        ideal: tr.querySelector('td[data-label="L50 CP ideal"] .badge')?.title ?? "",
+      })),
+    );
+    const wrong = shown.filter(({ id, now, ideal }) => now !== title(byId.get(id).adjustment) || ideal !== title(byId.get(id).idealAdjustment));
+    check(`Cut labels match the data on "${search}"`, shown.length > 0 && wrong.length === 0, wrong.map((row) => row.id).join(", "));
+    if (!(await cardsLayout(page))) {
+      const clipped = await page.$$eval("#list-body tr.row > td", (cells) => cells.filter((cell) => cell.scrollWidth > cell.clientWidth).map((cell) => cell.textContent));
+      check(`labels fit their cells on "${search}"`, clipped.length === 0, clipped.join(" | "));
+    }
+  }
+  await goTo(view, `${base}?q=necrozma`);
+  await page.screenshot({ path: join(view.out, `${label}-cut.png`) });
+  await goTo(view, base);
 }
 
 async function checkView(view, label) {
   const { page, base } = view;
   const width = view.size.width;
-  check("all forms render", (await page.locator("#list-body tr.row").count()) === rows.length);
+  check("one page of forms renders", (await page.locator("#list-body tr.row").count()) === PAGE_SIZE);
   check("count text", (await countText(page)) === forms(rows.length), await countText(page));
   check("default sort", (await firstName(page)) === visible({})[0].name, await firstName(page));
   check("no page overflow on the list", (await overflow(page)) <= 0, `${await overflow(page)}px`);
@@ -362,7 +459,11 @@ async function checkView(view, label) {
   check("logo is at the top", logo.y < 60, `y=${logo.y}`);
   await page.screenshot({ path: join(view.out, `${label}-list.png`) });
 
-  if (view.theme === "light") await checkControls(view, label);
+  if (view.theme === "light") {
+    await checkControls(view, label);
+    await checkPaging(view, label);
+    await checkCutLabels(view, label);
+  }
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   const about = page.locator(".site-footer a", { hasText: "About" });

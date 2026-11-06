@@ -3,6 +3,9 @@ import {
   COLUMNS,
   filterRows,
   nextSort,
+  pageCount,
+  pageLinks,
+  pageRows,
   paramsFromState,
   sortRows,
   stateFromParams,
@@ -20,9 +23,11 @@ function element<T extends HTMLElement>(id: string): T {
 }
 
 const rows = JSON.parse(element("list-data").textContent ?? "[]") as ListRow[];
+const table = element<HTMLTableElement>("list-table");
 const body = element<HTMLTableSectionElement>("list-body");
 const head = element<HTMLTableSectionElement>("list-head");
 const count = element("list-count");
+const pager = element("list-pager");
 const empty = element("list-empty");
 const search = element<HTMLInputElement>("list-search");
 const sortSelect = element<HTMLSelectElement>("list-sort");
@@ -121,18 +126,35 @@ function renderHead(): void {
   directionButton.setAttribute("aria-label", `Sort direction: ${ascending ? "ascending" : "descending"}. Select to reverse.`);
 }
 
-function syncUrl(): void {
-  const query = paramsFromState(state).toString();
-  history.replaceState(null, "", query ? `${location.pathname}?${query}` : location.pathname);
+function pageLinkHtml(link: number | null, page: number): string {
+  if (link === null) return `<li class="gap" aria-hidden="true">…</li>`;
+  const current = link === page ? ` aria-current="page"` : "";
+  return `<li><button type="button" data-page="${link}" aria-label="Page ${link}"${current}>${link}</button></li>`;
+}
+
+function renderPager(page: number, pages: number): void {
+  pager.hidden = pages === 1;
+  pager.innerHTML = `<button type="button" data-page="${page - 1}" data-step="prev"${page === 1 ? " disabled" : ""}>Previous</button>
+    <ol class="pages">${pageLinks(page, pages).map((link) => pageLinkHtml(link, page)).join("")}</ol>
+    <p class="page-status">Page ${page} of ${pages}</p>
+    <button type="button" data-page="${page + 1}" data-step="next"${page === pages ? " disabled" : ""}>Next</button>`;
+}
+
+function urlOf(next: ListState): string {
+  const query = paramsFromState(next).toString();
+  return query ? `${location.pathname}?${query}` : location.pathname;
 }
 
 function render(): void {
   const visible = sortRows(filterRows(rows, state), state);
-  body.innerHTML = visible.map(rowHtml).join("");
+  const pages = pageCount(visible.length);
+  state = { ...state, page: Math.min(state.page, pages) };
+  body.innerHTML = pageRows(visible, state.page).map(rowHtml).join("");
   empty.hidden = visible.length > 0;
   count.textContent = `${number.format(visible.length)} ${visible.length === 1 ? "form" : "forms"}`;
   renderHead();
-  syncUrl();
+  renderPager(state.page, pages);
+  history.replaceState(null, "", urlOf(state));
 }
 
 function update(next: Partial<ListState>): void {
@@ -156,10 +178,31 @@ function toggle(id: string, tr: HTMLTableRowElement): void {
 
 categories.addEventListener("change", (event) => {
   const input = event.target as HTMLInputElement;
-  update({ category: input.value as CategoryId });
+  update({ category: input.value as CategoryId, page: 1 });
 });
 
-search.addEventListener("input", () => update({ query: search.value }));
+search.addEventListener("input", () => update({ query: search.value, page: 1 }));
+
+pager.addEventListener("click", (event) => {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-page]");
+  if (!button) return;
+  const { step } = button.dataset;
+  const page = Number(button.dataset.page);
+  // Each page gets a history entry, so Back returns to the page before rather than leaving the site.
+  history.pushState(null, "", urlOf({ ...state, page }));
+  update({ page });
+  // The buttons were just redrawn, so put focus back. Next is disabled on the last page, and vice versa.
+  const same = step ? pager.querySelector<HTMLButtonElement>(`[data-step="${step}"]:not(:disabled)`) : pager.querySelector<HTMLButtonElement>('[aria-current="page"]');
+  (same ?? pager.querySelector<HTMLButtonElement>("button:not(:disabled)"))?.focus({ preventScroll: true });
+  if (table.getBoundingClientRect().top < 0) table.scrollIntoView();
+});
+
+window.addEventListener("popstate", () => {
+  state = stateFromParams(new URLSearchParams(location.search));
+  search.value = state.query;
+  syncCategoryInput();
+  render();
+});
 
 head.addEventListener("click", (event) => {
   const th = (event.target as HTMLElement).closest<HTMLElement>("th[data-key]");
@@ -188,7 +231,7 @@ body.addEventListener("click", (event) => {
 
 element("list-clear").addEventListener("click", () => {
   search.value = "";
-  update({ query: "", category: "all" });
+  update({ query: "", category: "all", page: 1 });
   syncCategoryInput();
   search.focus();
 });

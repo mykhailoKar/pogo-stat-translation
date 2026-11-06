@@ -1,4 +1,4 @@
-// What the site's list shows: its rows, categories, sorting, search and URL state. Pure, so the same
+// What the site's list shows: its rows, categories, sorting, search, pages and URL state. Pure, so the same
 // code runs in the build, the browser and the tests.
 import type { DatasetEntry, GoStats, MsStats, Pool } from "./types.ts";
 
@@ -69,9 +69,12 @@ export interface ListState {
   sort: SortKey;
   direction: Direction;
   query: string;
+  page: number;
 }
 
-export const DEFAULT_STATE: ListState = { category: "all", sort: "goFit", direction: "desc", query: "" };
+export const DEFAULT_STATE: ListState = { category: "all", sort: "goFit", direction: "desc", query: "", page: 1 };
+
+export const PAGE_SIZE = 10;
 
 export function toListRow(p: DatasetEntry): ListRow {
   const { gen, ...older } = p.msGoBasis ?? { gen: null };
@@ -156,14 +159,44 @@ export function sortRows(rows: readonly ListRow[], state: Pick<ListState, "sort"
   });
 }
 
+/** At least 1, so an empty list still has a page to be on. */
+export function pageCount(total: number): number {
+  return Math.max(1, Math.ceil(total / PAGE_SIZE));
+}
+
+/** The rows on one page. A page past the end gives the last page. */
+export function pageRows<T>(rows: readonly T[], page: number): T[] {
+  const start = (Math.min(page, pageCount(rows.length)) - 1) * PAGE_SIZE;
+  return rows.slice(start, start + PAGE_SIZE);
+}
+
+/** The pages a pager offers: the ends and the current page's neighbours, with null for each gap, as in 1 … 4 5 6 … 125. */
+export function pageLinks(page: number, pages: number): (number | null)[] {
+  const from = Math.max(1, Math.min(page - 1, pages - 2));
+  const to = Math.min(pages, Math.max(page + 1, 3));
+  const wanted = new Set([1, pages]);
+  for (let n = from; n <= to; n++) wanted.add(n);
+
+  const links: (number | null)[] = [];
+  let previous = 0;
+  for (const n of [...wanted].sort((a, b) => a - b)) {
+    // A gap of a single page shows that page, since "…" would take the same room.
+    if (n - previous === 2) links.push(n - 1);
+    else if (n - previous > 2) links.push(null);
+    links.push(n);
+    previous = n;
+  }
+  return links;
+}
+
 function firstDirection(key: SortKey): Direction {
   return COLUMNS.find((column) => column.key === key)?.first ?? "desc";
 }
 
-/** Selecting the sorted column flips it. A new column starts in its natural direction. */
+/** Selecting the sorted column flips it. A new column starts in its natural direction. Either way the list starts over. */
 export function nextSort(state: ListState, key: SortKey): ListState {
-  if (state.sort === key) return { ...state, direction: state.direction === "asc" ? "desc" : "asc" };
-  return { ...state, sort: key, direction: firstDirection(key) };
+  if (state.sort === key) return { ...state, direction: state.direction === "asc" ? "desc" : "asc", page: DEFAULT_STATE.page };
+  return { ...state, sort: key, direction: firstDirection(key), page: DEFAULT_STATE.page };
 }
 
 function isCategory(value: string | null): value is CategoryId {
@@ -179,12 +212,14 @@ export function stateFromParams(params: URLSearchParams): ListState {
   const category = params.get("category");
   const sort = params.get("sort");
   const direction = params.get("direction");
+  const page = Number(params.get("page"));
   const key = isSortKey(sort) ? sort : DEFAULT_STATE.sort;
   return {
     category: isCategory(category) ? category : DEFAULT_STATE.category,
     sort: key,
     direction: direction === "asc" || direction === "desc" ? direction : isSortKey(sort) ? firstDirection(key) : DEFAULT_STATE.direction,
     query: params.get("q") ?? "",
+    page: Number.isInteger(page) && page >= 1 ? page : DEFAULT_STATE.page,
   };
 }
 
@@ -195,5 +230,6 @@ export function paramsFromState(state: ListState): URLSearchParams {
   if (state.sort !== DEFAULT_STATE.sort) params.set("sort", state.sort);
   if (state.direction !== firstDirection(state.sort)) params.set("direction", state.direction);
   if (state.query !== "") params.set("q", state.query);
+  if (state.page !== DEFAULT_STATE.page) params.set("page", String(state.page));
   return params;
 }

@@ -3,11 +3,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   DEFAULT_STATE,
+  PAGE_SIZE,
   categoryCounts,
   filterRows,
   inCategory,
   matchesQuery,
   nextSort,
+  pageCount,
+  pageLinks,
+  pageRows,
   paramsFromState,
   sortRows,
   stateFromParams,
@@ -126,6 +130,54 @@ describe("sorting", () => {
     assert.deepEqual(nextSort(state({ sort: "goFit", direction: "asc" }), "name"), state({ sort: "name", direction: "asc" }));
     assert.deepEqual(nextSort(state({ sort: "name", direction: "asc" }), "cpIdeal"), state({ sort: "cpIdeal", direction: "desc" }));
   });
+
+  it("goes back to the first page whenever the order changes", () => {
+    assert.equal(nextSort(state({ sort: "goFit", page: 7 }), "goFit").page, 1);
+    assert.equal(nextSort(state({ sort: "goFit", page: 7 }), "name").page, 1);
+  });
+});
+
+describe("pages", () => {
+  const numbers = Array.from({ length: 25 }, (_, i) => i + 1);
+
+  it("shows ten rows a page", () => {
+    assert.equal(PAGE_SIZE, 10);
+    assert.deepEqual(pageRows(numbers, 1), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    assert.deepEqual(pageRows(numbers, 2), [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+  });
+
+  it("leaves the remainder on the last page", () => {
+    assert.deepEqual(pageRows(numbers, 3), [21, 22, 23, 24, 25]);
+  });
+
+  it("treats a page past the end as the last page", () => {
+    assert.deepEqual(pageRows(numbers, 99), [21, 22, 23, 24, 25]);
+  });
+
+  it("counts pages, with one for an empty list", () => {
+    assert.equal(pageCount(0), 1);
+    assert.equal(pageCount(10), 1);
+    assert.equal(pageCount(11), 2);
+    assert.equal(pageCount(1250), 125);
+    assert.deepEqual(pageRows([], 1), []);
+  });
+
+  it("offers the ends and the current page's neighbours", () => {
+    assert.deepEqual(pageLinks(60, 125), [1, null, 59, 60, 61, null, 125]);
+    assert.deepEqual(pageLinks(1, 125), [1, 2, 3, null, 125]);
+    assert.deepEqual(pageLinks(125, 125), [1, null, 123, 124, 125]);
+  });
+
+  it("shows a lone skipped page rather than a gap", () => {
+    assert.deepEqual(pageLinks(4, 125), [1, 2, 3, 4, 5, null, 125]);
+    assert.deepEqual(pageLinks(122, 125), [1, null, 121, 122, 123, 124, 125]);
+  });
+
+  it("lists every page of a short list", () => {
+    assert.deepEqual(pageLinks(1, 2), [1, 2]);
+    assert.deepEqual(pageLinks(2, 3), [1, 2, 3]);
+    assert.deepEqual(pageLinks(3, 5), [1, 2, 3, 4, 5]);
+  });
 });
 
 describe("URL state", () => {
@@ -135,8 +187,19 @@ describe("URL state", () => {
   });
 
   it("round-trips every setting", () => {
-    const shared = state({ category: "starter", sort: "name", direction: "desc", query: "char" });
+    const shared = state({ category: "starter", sort: "name", direction: "desc", query: "char", page: 3 });
     assert.deepEqual(stateFromParams(paramsFromState(shared)), shared);
+  });
+
+  it("leaves the first page out of the URL", () => {
+    assert.equal(paramsFromState(state({ page: 1 })).toString(), "");
+    assert.equal(paramsFromState(state({ page: 2 })).toString(), "page=2");
+  });
+
+  it("falls back to the first page for anything that isn't a page", () => {
+    for (const value of ["0", "-3", "2.5", "two", ""]) {
+      assert.equal(stateFromParams(new URLSearchParams(`page=${value}`)).page, 1, value);
+    }
   });
 
   it("omits a direction that matches the column's natural one", () => {
