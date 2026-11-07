@@ -41,9 +41,9 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
             data-state={status}
             aria-pressed={String(status === "on")}
           >
-            <span class="pill-mark" aria-hidden="true">
-              −
-            </span>
+            <svg class="pill-mark" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+              <path d="M2 2L8 8M8 2L2 8" />
+            </svg>
             <span class="pill-label">{category.label}</span>
             <small>{number.format(counts[category.id])}</small>
             <span class="sr-only pill-excluded" hidden>

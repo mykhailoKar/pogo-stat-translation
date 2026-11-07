@@ -383,6 +383,12 @@ async function showingCategories(view: View, name: string, partial: Partial<List
     els.map((el) => el.closest(".pill")?.getAttribute("data-category")),
   );
   check(`${name}: screen readers hear what's left out`, String(left) === String(state.exclude), String(left));
+  const crossed = await page.$$eval(".pill .pill-mark", (els) =>
+    els
+      .filter((el) => getComputedStyle(el).display !== "none")
+      .map((el) => el.closest(".pill")?.getAttribute("data-category")),
+  );
+  check(`${name}: left-out pills show a cross`, String(crossed) === String(state.exclude), String(crossed));
   const url = await urlState(page);
   check(
     `${name}: in the URL`,
