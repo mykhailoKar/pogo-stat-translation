@@ -8,6 +8,10 @@ updates:
       # One pull request for all minor and patch updates. Each major update gets its own.
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Node types follow the Node version in .nvmrc, so a new major comes with a runtime upgrade, not on its own.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
