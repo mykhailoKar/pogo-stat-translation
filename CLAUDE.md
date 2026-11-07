@@ -34,6 +34,7 @@ The project owner chooses what comes next. Candidates are listed in the README, 
 - When the site's behaviour or numbers change, update the About page (`src/pages/about.astro`) and `docs/methodology.md` in the same commit. Update `SKILL.md` and the driver if a control they use changes.
 - CI fails if the committed dataset differs from a fresh build, so commit the dataset and reports with the change that caused them.
 - Everything is TypeScript, including tooling. Node runs `.ts` directly (type stripping), so imports use `.ts` extensions and only erasable syntax is allowed (no enums, namespaces or parameter properties).
-- Credit Pokémon GO's developer as Scopely Explore, not Niantic. Trademark and affiliation lines name Scopely, its parent company. No sprites or other Nintendo art.
+- Credit Pokémon GO's developer as Scopely Explore, not Niantic. Trademark and affiliation lines name Scopely, its parent company.
+- Art from the games is allowed on [decision 0009](docs/decisions/0009-art-from-the-games.md)'s terms. The owner adds the files under `public/art/`, every source is credited, and it comes down if a rights holder asks. Don't draw, trace or copy the games' art yourself.
 - `main` is protected, so never push to it. Work on a branch, push the branch and open a pull request with `gh pr create`, using the template's checklist. It can merge only when both CI jobs pass, **Test and build** and **Browser checks**. Merge with a merge commit, not squash or rebase ([decision 0007](docs/decisions/0007-team-workflow.md)).
 - Commits: one change per commit, a short imperative subject, and a body that says why.
