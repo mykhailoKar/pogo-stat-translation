@@ -93,14 +93,15 @@ a {
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   color: var(--ink);
   text-decoration: none;
   border-radius: 6px;
 }
 
+/* A little taller than the name's capitals, so the name leads and the drawing sits beside it. */
 .logo-mark {
-  width: 46px;
+  width: 31px;
   height: auto;
   flex: none;
 }
