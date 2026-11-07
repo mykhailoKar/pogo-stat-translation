@@ -1,6 +1,6 @@
 ## What and why
 
-<!-- What this changes and why. Link the decision record if it makes or reverses a decision. -->
+<!-- What this changes and why. Link the decision record if it makes or reverses a decision, and write "Closes #N" for an issue it finishes. -->
 
 ## Checks
 

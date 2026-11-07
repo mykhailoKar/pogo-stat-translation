@@ -6,14 +6,14 @@ pogo-stat-translation scores how well each main-series Pokémon's base stats car
 
 | Read | When |
 |---|---|
-| `README.md` | First. What the project does, quick start, layout, status, and the candidate next steps |
+| `README.md` | First. What the project does, quick start, layout, status, and how the issue labels work |
 | `docs/methodology.md` | Before changing anything in `src/lib/` or `pipeline/`. It's the spec: formula, adjustments, GO Fit, the Cut label, categories |
 | `docs/decisions/` | Before reversing a past choice. Add a new record when you make a choice of the same weight |
 | `docs/data-sources.md` | Before touching the pipeline or refreshing data. Sources, their quirks, the refresh steps |
 | `.claude/skills/run-pogo-stat-translation/SKILL.md` | Before running the site or checking a UI change in a browser |
 | `data/reports/validation.md` | To see how the formula compares with GO's real stats |
 
-The project owner chooses what comes next. Candidates are listed in the README, and none is scheduled until the owner asks for it.
+The project owner chooses what comes next. Ideas and planned changes are GitHub issues (`gh issue list`), and none is scheduled until the owner asks for it. A new idea goes in a new issue, not the README, labelled by kind (`idea`, `enhancement` or `bug`) and part (`data` or `site`), plus `needs owner` if it waits on the owner. A pull request that finishes an issue says `Closes #N` in its body.
 
 ## Commands
 
