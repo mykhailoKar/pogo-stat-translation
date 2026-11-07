@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
-import { CATEGORIES, COLUMNS, DEFAULT_STATE, categoryCounts, toListRow } from "../lib/list.ts";
+import { CATEGORIES, COLUMNS, DEFAULT_STATE, categoryCounts, categoryStatus, toListRow } from "../lib/list.ts";
+import { typeSymbols } from "../lib/type-icons.ts";
 import { loadDataset } from "../site/load-dataset.ts";
 
 const dataset = loadDataset();
@@ -22,19 +23,43 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
     </p>
   </section>
 
-  <fieldset class="categories" id="list-categories">
-    <legend class="sr-only">Category</legend>
+  <div
+    class="categories"
+    id="list-categories"
+    role="group"
+    aria-label="Categories"
+    aria-describedby="list-categories-hint"
+  >
     <div class="pills">
-      {CATEGORIES.map((category) => (
-        <label class="pill">
-          <input type="radio" name="category" value={category.id} checked={category.id === DEFAULT_STATE.category} />
-          <span>
-            {category.label} <small>{number.format(counts[category.id])}</small>
-          </span>
-        </label>
-      ))}
+      {CATEGORIES.map((category) => {
+        const status = categoryStatus(DEFAULT_STATE, category.id);
+        return (
+          <button
+            type="button"
+            class="pill"
+            data-category={category.id}
+            data-state={status}
+            aria-pressed={String(status === "on")}
+          >
+            <svg class="pill-mark" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+              <path d="M2 2L8 8M8 2L2 8" />
+            </svg>
+            <span class="pill-label">{category.label}</span>
+            <small>{number.format(counts[category.id])}</small>
+            <span class="sr-only pill-excluded" hidden>
+              (left out)
+            </span>
+          </button>
+        );
+      })}
+      <p class="categories-hint" aria-hidden="true">
+        Double-click to leave one out
+      </p>
     </div>
-  </fieldset>
+    <p class="sr-only" id="list-categories-hint">
+      Select several categories to see forms in any of them. Double-click one, or press Shift+Enter, to leave it out.
+    </p>
+  </div>
 
   <div class="toolbar">
     <div class="search">
@@ -102,12 +127,13 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
   <nav class="pager" id="list-pager" aria-label="Pages" hidden></nav>
 
   <div class="empty" id="list-empty" hidden>
-    <p>No forms match that search.</p>
+    <p>No forms match. Try a shorter search or fewer categories.</p>
     <button type="button" class="button" id="list-clear">
       Show all forms
     </button>
   </div>
 
+  <svg class="sprite" id="type-icons" aria-hidden="true" focusable="false" set:html={typeSymbols()} />
   <script is:inline type="application/json" id="list-data" set:html={json} />
   <script src="../site/list-page.ts"></script>
 </Base>

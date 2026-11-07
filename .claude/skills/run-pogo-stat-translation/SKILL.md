@@ -53,20 +53,22 @@ It ends with `ALL <n> CHECKS PASSED` and exits 0, or lists each `FAIL` and exits
 Do something specific. Each argument is one step, and every run starts on the list page with a new browser:
 
 ```bash
-node .claude/skills/run-pogo-stat-translation/driver.ts drive --size phone --theme dark "category mega" "sort cpNow" "count" "rows 3" "shot mega-phone"
+node .claude/skills/run-pogo-stat-translation/driver.ts drive --size phone --theme dark "category legendary" "exclude mega" "sort cpNow" "count" "rows 3" "shot legendary-phone"
 ```
 
 It prints each step's result, then any console or network errors, which also make it exit 1. Add `--no-build` to reuse the last build.
 
 | Step | What it does |
 |---|---|
-| `category <id>` | `all`, `legendary`, `mega`, `mythical`, `starter`, `fully-evolved` |
+| `category <id>` | Clicks a category: `legendary`, `mega`, `mythical`, `starter` or `fully-evolved` is added to the selection, or taken away if it's selected or left out. `all` clears every choice |
+| `exclude <id>` | Double-clicks a category, which leaves it out, or brings it back if it was left out |
 | `sort <key>` | `dex`, `name`, `goFit`, `percentile`, `attackFit`, `defenseFit`, `speedFit`, `cpNow`, `cpIdeal`. Uses the headings or the phone menu, whichever is showing |
 | `flip` | Reverses the sort |
 | `search <text>` | Types in the search box |
 | `open <id>` | Opens or closes a row, such as `open garchomp` |
 | `next`, `prev` | Moves one page |
-| `page <n>` | Goes to a page. Uses its number if the pager shows it, otherwise walks there with `next` or `prev` |
+| `next5`, `prev5` | Moves five pages with the 5> and <5 buttons, stopping at the first or last page |
+| `page <n>` | Goes to a page. Uses its number if the pager shows it, otherwise walks there with `next5` or `prev5`, then `next` or `prev` |
 | `rows [n]` | Prints the first rows (default 5) |
 | `count`, `url`, `overflow` | Print the count line, the URL, and how far the page overflows sideways |
 | `goto <path>` | Relative to the site, such as `goto about/` or `goto ?category=mega&q=char` |
@@ -124,9 +126,12 @@ npm run verify
 
 - **`page.url()` is stale in your own Playwright code.** The list writes its state with `history.replaceState`, and `page.url()` updates a moment later. Changing page uses `pushState`, so `page.goBack()` returns to the page before. Read `location.href` with `page.evaluate`, as the driver does. This silently lost a search term.
 - **`localhost` differs by OS.** On Linux, Astro binds it to `::1` only, and Node's `fetch` tries `127.0.0.1` and is refused, while `curl` still works. The driver avoids this by passing `--host 127.0.0.1`.
+- **`category` adds to the selection.** Each run starts with nothing selected, and `category all` clears it. The URL repeats a parameter per category, as in `?category=legendary&category=mythical&exclude=mega`, and a link with one `category` still works.
+- **A double-click's first click shows for a moment.** The click selects the category and the double-click then leaves it out, so the list redraws twice. Shift+click does it in one go.
 - **`sort` on the current column does nothing,** so `sort goFit` is safe to repeat. Clicking that heading in the page flips it, and `flip` does the same.
 - **`open <id>` only finds rows on the current page.** There are 10 per page, so search first. The id is the form's dataset id, such as `rayquaza-mega`.
-- **For a far page, use `goto ?page=50`.** `page 50` from page 1 clicks Next 49 times, because the pager only shows nearby numbers.
+- **For a far page, use `goto ?page=50`.** `page 50` from page 1 clicks 5> nine times and Next four times, because the pager only shows nearby numbers.
+- **Below 700px the pager hides its numbers** and shows "Page X of Y" on a row of its own, so `page <n>` walks there.
 - **Percentile doesn't change between categories,** and Megas are ranked among themselves. Two forms showing 100.0 isn't a bug.
 - **Name sort uses the species,** so Mega Charizard X sits next to Charizard and the visible names won't look alphabetical.
 - **Headings look thin in a Linux container.** The page falls back to WenQuanYi Zen Hei there, which has no bold, although the CSS still says 700. It isn't a site bug, so judge layout from those screenshots, not type weight.

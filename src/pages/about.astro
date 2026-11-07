@@ -59,8 +59,9 @@ const commit = (sha: string | undefined) => sha?.slice(0, 7) ?? "unknown";
 
     <h2 id="reading-the-list">Reading the list</h2>
     <p>
-      Each row is one form, with 10 forms to a page. Select a column heading to sort by it, and select it again to
-      reverse the order. Select a row to see its stats next to its best shape.
+      Each row is one form, with 10 forms to a page, and the &lt;5 and 5&gt; buttons skip five pages at a time. Select a
+      column heading to sort by it, and select it again to reverse the order. Select a row to see its stats next to its
+      best shape.
     </p>
     <dl>
       <dt>GO Fit</dt>
@@ -235,6 +236,11 @@ GO Fit      = {example.actual.atk} × {example.actual.def} ÷ ({example.best.atk
     <p>The best shape is chosen for stat product, not CP, so it isn't the highest CP a form's points could reach.</p>
 
     <h2 id="categories">Categories</h2>
+    <p>
+      Select a category to show only its forms, and select more to add theirs. Double-click a category, or press
+      Shift+Enter on it, to leave its forms out, with or without other categories selected. Leaving out wins, so
+      Legendaries with Megas + Primals left out shows no Mega or Primal. All species clears every choice.
+    </p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -338,14 +344,15 @@ GO Fit      = {example.actual.atk} × {example.actual.def} ÷ ({example.best.atk
         The conversion formula draws on <a href="https://bulbapedia.bulbagarden.net/wiki/Stat_(GO)">Bulbapedia</a> and
         the <a href="https://www.dittobase.com/pokemon-go/stat-converter">Dittobase stat converter</a>.
       </li>
+      <li>The logo and the type icons are original drawings. The site uses no art from the games.</li>
     </ul>
     <p>
       The full dataset is available as <a href={`${home}data/pokemon.json`}>JSON</a>, and the code and methodology are
       on <a href="https://github.com/mykhailoKar/pogo-stat-translation">GitHub</a>.
     </p>
     <p>
-      Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely Explore. This is an
-      unofficial fan project and isn't affiliated with any of them.
+      Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely. This is an unofficial
+      fan project and isn't affiliated with any of them.
     </p>
   </article>
 </Base>

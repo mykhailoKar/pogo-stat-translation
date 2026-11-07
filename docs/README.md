@@ -16,6 +16,7 @@
 - [0005: GO Fit as the headline score](decisions/0005-go-fit-headline-score.md)
 - [0006: Astro site with the list data inlined](decisions/0006-astro-site-inline-list-data.md)
 - [0007: Pull requests, a formatter, browser checks in CI and Dependabot](decisions/0007-team-workflow.md)
+- [0008: Categories that combine and leave out](decisions/0008-combined-categories.md)
 
 ## Generated reports
 

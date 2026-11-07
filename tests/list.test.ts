@@ -3,16 +3,21 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   DEFAULT_STATE,
+  PAGE_JUMP,
   PAGE_SIZE,
   categoryCounts,
+  categoryStatus,
+  excludeCategory,
   filterRows,
   inCategory,
+  jumpPage,
   matchesQuery,
   nextSort,
   pageCount,
   pageLinks,
   pageRows,
   paramsFromState,
+  selectCategory,
   sortRows,
   stateFromParams,
   type ListRow,
@@ -77,11 +82,11 @@ const ids = (list: ListRow[]): string[] => list.map((r) => r.id);
 
 describe("categories", () => {
   it("shows every form under All species", () => {
-    assert.equal(filterRows(rows, state({ category: "all" })).length, rows.length);
+    assert.equal(filterRows(rows, state({})).length, rows.length);
   });
 
   it("gives Megas and Primals a category of their own", () => {
-    assert.deepEqual(ids(filterRows(rows, state({ category: "mega" }))), ["charizard-mega-x", "kyogre-primal"]);
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["mega"] }))), ["charizard-mega-x", "kyogre-primal"]);
   });
 
   it("also lists Megas and Primals under their species' categories", () => {
@@ -92,14 +97,14 @@ describe("categories", () => {
   });
 
   it("selects by tag for the rest", () => {
-    assert.deepEqual(ids(filterRows(rows, state({ category: "legendary" }))), ["mewtwo", "kyogre-primal"]);
-    assert.deepEqual(ids(filterRows(rows, state({ category: "mythical" }))), ["mew"]);
-    assert.deepEqual(ids(filterRows(rows, state({ category: "starter" }))), [
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["legendary"] }))), ["mewtwo", "kyogre-primal"]);
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["mythical"] }))), ["mew"]);
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["starter"] }))), [
       "charizard",
       "charizard-mega-x",
       "charmander",
     ]);
-    assert.deepEqual(ids(filterRows(rows, state({ category: "fully-evolved" }))), [
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["fully-evolved"] }))), [
       "charizard",
       "charizard-mega-x",
       "mewtwo",
@@ -117,6 +122,95 @@ describe("categories", () => {
       starter: 3,
       "fully-evolved": 5,
     });
+  });
+});
+
+describe("combined categories", () => {
+  it("shows forms in any selected category", () => {
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["legendary", "mythical"] }))), [
+      "mewtwo",
+      "mew",
+      "kyogre-primal",
+    ]);
+  });
+
+  it("shows a form once, however many of its categories are selected", () => {
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["starter", "mega"] }))), [
+      "charizard",
+      "charizard-mega-x",
+      "kyogre-primal",
+      "charmander",
+    ]);
+  });
+
+  it("leaves out a category on its own, from every form", () => {
+    assert.deepEqual(ids(filterRows(rows, state({ exclude: ["mega"] }))), [
+      "charizard",
+      "mewtwo",
+      "mew",
+      "charmander",
+      "flabebe",
+      "farfetchd",
+    ]);
+  });
+
+  it("lets a left-out category win over a selected one", () => {
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["legendary"], exclude: ["mega"] }))), ["mewtwo"]);
+    assert.deepEqual(ids(filterRows(rows, state({ exclude: ["starter", "legendary"] }))), [
+      "mew",
+      "flabebe",
+      "farfetchd",
+    ]);
+  });
+});
+
+describe("choosing categories", () => {
+  it("adds a category with a click, and takes it away with another", () => {
+    const one = selectCategory(state({ page: 4 }), "mythical");
+    assert.deepEqual([one.include, one.exclude, one.page], [["mythical"], [], 1]);
+    const two = selectCategory(one, "legendary");
+    assert.deepEqual(two.include, ["legendary", "mythical"]);
+    assert.deepEqual(selectCategory(two, "mythical").include, ["legendary"]);
+  });
+
+  it("brings a left-out category back with a click", () => {
+    const next = selectCategory(state({ exclude: ["mega", "starter"] }), "mega");
+    assert.deepEqual([next.include, next.exclude], [[], ["starter"]]);
+  });
+
+  it("clears every choice with All species", () => {
+    const next = selectCategory(state({ include: ["starter"], exclude: ["mega"], page: 3 }), "all");
+    assert.deepEqual([next.include, next.exclude, next.page], [[], [], 1]);
+  });
+
+  it("leaves a category out with a double-click, selected or not", () => {
+    const fromNothing = excludeCategory(state({}), "mega");
+    assert.deepEqual([fromNothing.include, fromNothing.exclude], [[], ["mega"]]);
+    const fromSelected = excludeCategory(state({ include: ["legendary", "mega"] }), "mega");
+    assert.deepEqual([fromSelected.include, fromSelected.exclude], [["legendary"], ["mega"]]);
+  });
+
+  it("brings a left-out category back with a second double-click", () => {
+    assert.deepEqual(excludeCategory(state({ exclude: ["starter", "mega"] }), "mega").exclude, ["starter"]);
+  });
+
+  it("can't leave out All species", () => {
+    const before = state({ include: ["starter"], page: 2 });
+    assert.equal(excludeCategory(before, "all"), before);
+  });
+
+  it("starts the list over at page 1", () => {
+    assert.equal(excludeCategory(state({ page: 5 }), "mega").page, 1);
+  });
+
+  it("marks each pill on, off or left out", () => {
+    const chosen = state({ include: ["legendary"], exclude: ["mega"] });
+    assert.equal(categoryStatus(chosen, "legendary"), "on");
+    assert.equal(categoryStatus(chosen, "mega"), "excluded");
+    assert.equal(categoryStatus(chosen, "starter"), "off");
+    assert.equal(categoryStatus(chosen, "all"), "off");
+    assert.equal(categoryStatus(state({}), "all"), "on");
+    assert.equal(categoryStatus(state({ exclude: ["mega"] }), "all"), "off");
   });
 });
 
@@ -138,7 +232,7 @@ describe("search", () => {
   });
 
   it("searches within the selected category", () => {
-    assert.deepEqual(ids(filterRows(rows, state({ category: "mega", query: "char" }))), ["charizard-mega-x"]);
+    assert.deepEqual(ids(filterRows(rows, state({ include: ["mega"], query: "char" }))), ["charizard-mega-x"]);
   });
 });
 
@@ -237,6 +331,19 @@ describe("pages", () => {
     assert.deepEqual(pageLinks(122, 125), [1, null, 121, 122, 123, 124, 125]);
   });
 
+  it("jumps five pages at a time", () => {
+    assert.equal(PAGE_JUMP, 5);
+    assert.equal(jumpPage(1, 125, PAGE_JUMP), 6);
+    assert.equal(jumpPage(60, 125, -PAGE_JUMP), 55);
+  });
+
+  it("stops a jump at the first or last page", () => {
+    assert.equal(jumpPage(3, 125, -PAGE_JUMP), 1);
+    assert.equal(jumpPage(123, 125, PAGE_JUMP), 125);
+    assert.equal(jumpPage(2, 3, PAGE_JUMP), 3);
+    assert.equal(jumpPage(1, 1, PAGE_JUMP), 1);
+  });
+
   it("lists every page of a short list", () => {
     assert.deepEqual(pageLinks(1, 2), [1, 2]);
     assert.deepEqual(pageLinks(2, 3), [1, 2, 3]);
@@ -251,7 +358,7 @@ describe("URL state", () => {
   });
 
   it("round-trips every setting", () => {
-    const shared = state({ category: "starter", sort: "name", direction: "desc", query: "char", page: 3 });
+    const shared = state({ include: ["starter"], sort: "name", direction: "desc", query: "char", page: 3 });
     assert.deepEqual(stateFromParams(paramsFromState(shared)), shared);
   });
 
@@ -273,5 +380,31 @@ describe("URL state", () => {
 
   it("falls back to defaults for unknown values", () => {
     assert.deepEqual(stateFromParams(new URLSearchParams("category=nope&sort=nope&direction=sideways")), DEFAULT_STATE);
+    assert.deepEqual(stateFromParams(new URLSearchParams("category=all&exclude=all&exclude=")), DEFAULT_STATE);
+  });
+
+  it("writes each chosen category as its own parameter, in the pills' order", () => {
+    const chosen = state({ include: ["mythical", "legendary"], exclude: ["mega"] });
+    assert.equal(paramsFromState(chosen).toString(), "category=legendary&category=mythical&exclude=mega");
+    assert.deepEqual(
+      stateFromParams(paramsFromState(chosen)),
+      state({ include: ["legendary", "mythical"], exclude: ["mega"] }),
+    );
+  });
+
+  it("still reads a link from before categories could combine", () => {
+    assert.deepEqual(stateFromParams(new URLSearchParams("category=mega")), state({ include: ["mega"] }));
+  });
+
+  it("reads categories split by commas, once each", () => {
+    assert.deepEqual(stateFromParams(new URLSearchParams("category=starter,legendary&category=starter")).include, [
+      "legendary",
+      "starter",
+    ]);
+  });
+
+  it("lets a category that's both selected and left out stay left out", () => {
+    const both = stateFromParams(new URLSearchParams("category=mega&category=starter&exclude=mega"));
+    assert.deepEqual([both.include, both.exclude], [["starter"], ["mega"]]);
   });
 });

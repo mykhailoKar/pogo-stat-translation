@@ -200,6 +200,7 @@ Both multipliers reproduce GO's real stats (§4), so the label follows the game 
 - **Legendary and mythical** are PokéAPI's species flags. Ultra Beasts and most Paradox Pokémon aren't flagged legendary, but Koraidon and Miraidon are.
 - **`starter`** marks every form in the evolution chains listed under `starters` in `data/overrides.yaml`. That's 27 lines, with all stages and regional forms. Pikachu and Eevee are left out.
 - **`fully-evolved`** marks a form when nothing evolves from its species, and every Mega and Primal. PokéAPI records evolution per species, so forms that can't evolve although their species can are listed under `finalForms`. Corsola is listed, for example, because only Galarian Corsola evolves.
+- **Categories combine.** A form shows when it's in any selected category, or in none when nothing is selected, and hides when it's in any left-out category. Leaving out wins, so Legendaries with Megas + Primals left out has no Mega or Primal. `inCategories` in `src/lib/list.ts` applies the rule, and [decision 0008](decisions/0008-combined-categories.md) explains it.
 - **Megas and Primals keep their species' tags,** so Mega Rayquaza appears under Legendaries, Mega Charizard X under Starters, and both under Fully evolved.
 - **Percentile doesn't change between categories.** It's a form's rank in its pool (§7), so a form shows the same number everywhere, and a Mega's percentile compares it with other Megas and Primals only.
 

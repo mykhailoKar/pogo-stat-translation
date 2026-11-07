@@ -70,4 +70,4 @@ Then commit the lock, the dataset and the reports together.
 
 ## Attribution
 
-Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely Explore. This is an unofficial fan project, not affiliated with any of them. Data comes from PokéAPI (BSD-3-Clause) and PvPoke (MIT).
+Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely. This is an unofficial fan project, not affiliated with any of them. Data comes from PokéAPI (BSD-3-Clause) and PvPoke (MIT).

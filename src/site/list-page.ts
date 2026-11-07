@@ -1,19 +1,26 @@
 // Runs the list page: reads the rows embedded in the HTML, then renders them from the current state.
 import {
   COLUMNS,
+  PAGE_JUMP,
+  categoryStatus,
+  excludeCategory,
   filterRows,
+  jumpPage,
   nextSort,
   pageCount,
   pageLinks,
   pageRows,
   paramsFromState,
+  selectCategory,
   sortRows,
   stateFromParams,
   type CategoryId,
+  type FilterId,
   type ListRow,
   type ListState,
   type SortKey,
 } from "../lib/list.ts";
+import { isTypeName } from "../lib/type-icons.ts";
 import type { GoStats, MsStats } from "../lib/types.ts";
 
 function element<T extends HTMLElement>(id: string): T {
@@ -46,6 +53,14 @@ function escapeHtml(text: string): string {
 
 function capitalize(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/** A type's name with its icon, which points into the sprite in the page. Screen readers get the name alone. */
+function typeHtml(type: string): string {
+  const icon = isTypeName(type)
+    ? `<svg class="type-icon" aria-hidden="true" focusable="false"><use href="#type-${type}"></use></svg>`
+    : "";
+  return `<span class="type">${icon}${capitalize(type)}</span>`;
 }
 
 function percent(value: number): string {
@@ -103,7 +118,7 @@ function cutBadge(adjustment: number): string {
 
 function rowHtml(row: ListRow): string {
   const isOpen = open.has(row.id);
-  const types = row.types.map(capitalize).join(" / ");
+  const types = row.types.map(typeHtml).join(" ");
   const predicted = row.predicted
     ? `<span class="badge" title="Not in GO data yet; GO stats are predicted">Predicted</span>`
     : "";
@@ -142,14 +157,42 @@ function pageLinkHtml(link: number | null, page: number): string {
   return `<li><button type="button" data-page="${link}" aria-label="Page ${link}"${current}>${link}</button></li>`;
 }
 
+/**
+ * A Previous, Next, <5 or 5> button. `data-step` lets focus return to the same button once the pager is redrawn.
+ * A jump shows symbols, so its name and its title spell out what it does.
+ */
+function stepHtml(step: string, target: number, disabled: boolean, text: string, hint = ""): string {
+  const name = hint ? ` aria-label="${hint}" title="${hint}"` : "";
+  return `<button type="button" data-page="${target}" data-step="${step}"${name}${disabled ? " disabled" : ""}>${text}</button>`;
+}
+
 function renderPager(page: number, pages: number): void {
+  const first = page === 1;
+  const last = page === pages;
   pager.hidden = pages === 1;
-  pager.innerHTML = `<button type="button" data-page="${page - 1}" data-step="prev"${page === 1 ? " disabled" : ""}>Previous</button>
+  pager.innerHTML = `<div class="pager-group">
+      ${stepHtml("prev5", jumpPage(page, pages, -PAGE_JUMP), first, `&lt;${PAGE_JUMP}`, `Back ${PAGE_JUMP} pages`)}
+      ${stepHtml("prev", page - 1, first, "Previous")}
+    </div>
     <ol class="pages">${pageLinks(page, pages)
       .map((link) => pageLinkHtml(link, page))
       .join("")}</ol>
     <p class="page-status">Page ${page} of ${pages}</p>
-    <button type="button" data-page="${page + 1}" data-step="next"${page === pages ? " disabled" : ""}>Next</button>`;
+    <div class="pager-group">
+      ${stepHtml("next", page + 1, last, "Next")}
+      ${stepHtml("next5", jumpPage(page, pages, PAGE_JUMP), last, `${PAGE_JUMP}&gt;`, `Forward ${PAGE_JUMP} pages`)}
+    </div>`;
+}
+
+/** Shows each category as selected, left out or neither. */
+function renderCategories(): void {
+  for (const pill of categories.querySelectorAll<HTMLButtonElement>("button[data-category]")) {
+    const status = categoryStatus(state, pill.dataset.category as CategoryId);
+    pill.dataset.state = status;
+    pill.setAttribute("aria-pressed", String(status === "on"));
+    const note = pill.querySelector<HTMLElement>(".pill-excluded");
+    if (note) note.hidden = status !== "excluded";
+  }
 }
 
 function urlOf(next: ListState): string {
@@ -165,6 +208,7 @@ function render(): void {
   empty.hidden = visible.length > 0;
   count.textContent = `${number.format(visible.length)} ${visible.length === 1 ? "form" : "forms"}`;
   renderHead();
+  renderCategories();
   renderPager(state.page, pages);
   history.replaceState(null, "", urlOf(state));
 }
@@ -188,9 +232,34 @@ function toggle(id: string, tr: HTMLTableRowElement): void {
   }
 }
 
-categories.addEventListener("change", (event) => {
-  const input = event.target as HTMLInputElement;
-  update({ category: input.value as CategoryId, page: 1 });
+/** The categories just before the latest single click, so a double-click can undo that click before it acts. */
+let beforeClick: { id: CategoryId; include: FilterId[]; exclude: FilterId[] } | null = null;
+
+function pillOf(event: Event): CategoryId | null {
+  const pill = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-category]");
+  return (pill?.dataset.category as CategoryId | undefined) ?? null;
+}
+
+// A click selects a category. Shift+click, Shift+Enter or Shift+Space leaves it out instead.
+categories.addEventListener("click", (event) => {
+  const id = pillOf(event);
+  // The second click of a double-click. The dblclick event that follows does the work.
+  if (!id || event.detail >= 2) return;
+  beforeClick = { id, include: state.include, exclude: state.exclude };
+  state = event.shiftKey ? excludeCategory(state, id) : selectCategory(state, id);
+  render();
+});
+
+// The first click already toggled the category, so start from before it: a double-click always leaves a
+// category out, or brings back one that was left out.
+categories.addEventListener("dblclick", (event) => {
+  const id = pillOf(event);
+  if (!id) return;
+  const before = beforeClick?.id === id ? beforeClick : null;
+  const base = before ? { ...state, include: before.include, exclude: before.exclude } : state;
+  state = excludeCategory(base, id);
+  beforeClick = null;
+  render();
 });
 
 search.addEventListener("input", () => update({ query: search.value, page: 1 }));
@@ -214,7 +283,6 @@ pager.addEventListener("click", (event) => {
 window.addEventListener("popstate", () => {
   state = stateFromParams(new URLSearchParams(location.search));
   search.value = state.query;
-  syncCategoryInput();
   render();
 });
 
@@ -245,16 +313,9 @@ body.addEventListener("click", (event) => {
 
 element("list-clear").addEventListener("click", () => {
   search.value = "";
-  update({ query: "", category: "all", page: 1 });
-  syncCategoryInput();
+  update({ query: "", include: [], exclude: [], page: 1 });
   search.focus();
 });
 
-function syncCategoryInput(): void {
-  const input = categories.querySelector<HTMLInputElement>(`input[value="${state.category}"]`);
-  if (input) input.checked = true;
-}
-
 search.value = state.query;
-syncCategoryInput();
 render();
