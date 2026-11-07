@@ -3,7 +3,7 @@ name: run-pogo-stat-translation
 description: Build, run, drive, test and screenshot the pogo-stat-translation site, an Astro list of Pokémon GO Fit scores with a data pipeline behind it. Use when asked to start or run the site, take a screenshot, check it at phone, tablet or desktop sizes, confirm a UI change in a real browser, try sorting, categories, search, paging, row details, URL state, dark mode or the About page, or rebuild and test the dataset.
 ---
 
-A static Astro site with a Node data pipeline. Drive the site with `.claude/skills/run-pogo-stat-translation/driver.mjs`. It builds the site, serves it on a private port, runs a real browser and shuts everything down when it exits, so there's no server to start or stop.
+A static Astro site with a Node data pipeline. Drive the site with `.claude/skills/run-pogo-stat-translation/driver.ts`. It builds the site, serves it on a private port, runs a real browser and shuts everything down when it exits, so there's no server to start or stop.
 
 Run everything from the repo root.
 
@@ -45,7 +45,7 @@ npx playwright-core install --with-deps --only-shell chromium
 Check the whole site:
 
 ```bash
-node .claude/skills/run-pogo-stat-translation/driver.mjs check --quick
+node .claude/skills/run-pogo-stat-translation/driver.ts check --quick
 ```
 
 It ends with `ALL <n> CHECKS PASSED` and exits 0, or lists each `FAIL` and exits 1. `--quick` covers 3 sizes in light and dark in about 20 seconds. Without it, `check` takes about a minute and covers all 9 sizes, including the 759/760px edge where cards become a table, and reports how long sorting takes on a slowed CPU.
@@ -53,7 +53,7 @@ It ends with `ALL <n> CHECKS PASSED` and exits 0, or lists each `FAIL` and exits
 Do something specific. Each argument is one step, and every run starts on the list page with a new browser:
 
 ```bash
-node .claude/skills/run-pogo-stat-translation/driver.mjs drive --size phone --theme dark "category mega" "sort cpNow" "count" "rows 3" "shot mega-phone"
+node .claude/skills/run-pogo-stat-translation/driver.ts drive --size phone --theme dark "category mega" "sort cpNow" "count" "rows 3" "shot mega-phone"
 ```
 
 It prints each step's result, then any console or network errors, which also make it exit 1. Add `--no-build` to reuse the last build.
@@ -110,10 +110,10 @@ Serves `http://localhost:4321/pogo-stat-translation/` with live reload until Ctr
 
 ## Test
 
-Before committing, run what CI runs:
+Before committing, run what CI runs. It builds the dataset, tests, lints, type-checks and builds the site:
 
 ```bash
-npm run build:data && npm test && npm run lint && npm run typecheck && npm run build
+npm run verify
 ```
 
 `tsc` doesn't read `.astro` files, so a wrong call in a page passes all of this. Only the driver or your eyes will catch it.
@@ -128,6 +128,7 @@ npm run build:data && npm test && npm run lint && npm run typecheck && npm run b
 - **Percentile doesn't change between categories,** and Megas are ranked among themselves. Two forms showing 100.0 isn't a bug.
 - **Name sort uses the species,** so Mega Charizard X sits next to Charizard and the visible names won't look alphabetical.
 - **Headings look thin in a Linux container.** The page falls back to WenQuanYi Zen Hei there, which has no bold, although the CSS still says 700. It isn't a site bug, so judge layout from those screenshots, not type weight.
+- **The driver is TypeScript and is type-checked with the rest.** If an export it uses from `src/lib/list.ts` changes, `npm run typecheck` fails before the driver runs.
 - **Only Chromium is covered.** Touch is emulated, so Safari, Firefox and real phones are untested.
 
 ## Troubleshooting

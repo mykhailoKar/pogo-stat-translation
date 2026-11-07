@@ -1,4 +1,4 @@
-// Shared types for the pipeline and (from Phase 2) the browser. Keep this file free of runtime code.
+// Shared types for the pipeline and the browser. Keep this file free of runtime code.
 
 /** Main-series base stats. */
 export interface MsStats {
@@ -22,7 +22,7 @@ export interface GoStats {
 /** How a GO conversion multiplier was chosen. See docs/methodology.md. */
 export type AdjustmentReason = "none" | "cp-cut" | "mega" | "fixed";
 
-/** Intermediate values of the conversion, shown step by step in the Phase 2 UI. */
+/** Intermediate values of the conversion. The dataset stores them; the site doesn't show them yet. */
 export interface ConversionSteps {
   /** round(2 × (7/8 × higher + 1/8 × lower)) of Attack and Sp. Atk. */
   atkBlend: number;
