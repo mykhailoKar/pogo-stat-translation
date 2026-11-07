@@ -60,14 +60,13 @@ Everything is TypeScript, including the config and tooling. Node 24 runs `.ts` f
 
 ## What's next
 
-Nothing is scheduled. The candidates so far, in no order:
+Ideas and planned changes are [GitHub issues](https://github.com/mykhailoKar/pogo-stat-translation/issues). Nothing is scheduled until the owner picks one. Each issue has one label for its kind:
 
-- **Format lenses:** scores for raids, gyms, Max Battles and the Great, Ultra and Master Leagues ([methodology §10](docs/methodology.md#10-open-questions)).
-- **Playground:** type any stat spread and see it converted live. The formula already runs in the browser for this reason ([decision 0002](docs/decisions/0002-typescript-end-to-end.md)).
-- **A page per Pokémon,** with a link that can be shared.
-- **Shadow forms,** and notes on abilities GO drops, such as Huge Power and Truant.
-- **A scheduled data refresh** in GitHub Actions.
-- **A global rank** in place of the percentile: each form's place by GO Fit among every form, Megas and Primals included, the same whichever categories are picked. Today the percentile ranks Megas and Primals in a pool of their own ([methodology §5](docs/methodology.md#5-metrics)).
+- **`idea`:** a possible new feature, with design questions to settle first.
+- **`enhancement`:** an improvement to something the site or pipeline already does.
+- **`bug`:** something that works wrong.
+
+It also has `data` or `site` for the part it touches, and `needs owner` when it waits on the owner, such as for art files.
 
 The site has no art from the games yet. [Decision 0009](docs/decisions/0009-art-from-the-games.md) allows it on the owner's terms: the owner adds it under `public/art/`, it's credited, and it comes down if a rights holder asks.
 
