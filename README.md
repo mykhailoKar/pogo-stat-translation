@@ -67,6 +67,7 @@ Nothing is scheduled. The candidates so far, in no order:
 - **A page per Pokémon,** with a link that can be shared.
 - **Shadow forms,** and notes on abilities GO drops, such as Huge Power and Truant.
 - **A scheduled data refresh** in GitHub Actions.
+- **A global rank** in place of the percentile: each form's place by GO Fit among every form, Megas and Primals included, the same whichever categories are picked. Today the percentile ranks Megas and Primals in a pool of their own ([methodology §5](docs/methodology.md#5-metrics)).
 
 Sprites are left out on purpose ([decision 0006](docs/decisions/0006-astro-site-inline-list-data.md)).
 
