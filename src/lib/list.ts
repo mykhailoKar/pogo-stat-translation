@@ -263,10 +263,10 @@ export function pageRows<T>(rows: readonly T[], page: number): T[] {
   return rows.slice(start, start + PAGE_SIZE);
 }
 
-/** How many pages the pager's −5 and +5 buttons move. */
+/** How many pages the pager's <5 and 5> buttons move. */
 export const PAGE_JUMP = 5;
 
-/** The page `delta` pages away, kept between the first page and the last, so −5 from page 3 lands on page 1. */
+/** The page `delta` pages away, kept between the first page and the last, so <5 from page 3 lands on page 1. */
 export function jumpPage(page: number, pages: number, delta: number): number {
   return Math.min(pages, Math.max(1, page + delta));
 }

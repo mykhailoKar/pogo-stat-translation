@@ -158,11 +158,11 @@ function pageLinkHtml(link: number | null, page: number): string {
 }
 
 /**
- * A Previous, Next, −5 or +5 button. `data-step` lets focus return to the same button once the pager is redrawn.
- * A jump's name starts with its visible text, so voice control can say what's on screen, and its title spells it out.
+ * A Previous, Next, <5 or 5> button. `data-step` lets focus return to the same button once the pager is redrawn.
+ * A jump shows symbols, so its name and its title spell out what it does.
  */
 function stepHtml(step: string, target: number, disabled: boolean, text: string, hint = ""): string {
-  const name = hint ? ` aria-label="${text} pages" title="${hint}"` : "";
+  const name = hint ? ` aria-label="${hint}" title="${hint}"` : "";
   return `<button type="button" data-page="${target}" data-step="${step}"${name}${disabled ? " disabled" : ""}>${text}</button>`;
 }
 
@@ -171,7 +171,7 @@ function renderPager(page: number, pages: number): void {
   const last = page === pages;
   pager.hidden = pages === 1;
   pager.innerHTML = `<div class="pager-group">
-      ${stepHtml("prev5", jumpPage(page, pages, -PAGE_JUMP), first, `−${PAGE_JUMP}`, `Back ${PAGE_JUMP} pages`)}
+      ${stepHtml("prev5", jumpPage(page, pages, -PAGE_JUMP), first, `&lt;${PAGE_JUMP}`, `Back ${PAGE_JUMP} pages`)}
       ${stepHtml("prev", page - 1, first, "Previous")}
     </div>
     <ol class="pages">${pageLinks(page, pages)
@@ -180,7 +180,7 @@ function renderPager(page: number, pages: number): void {
     <p class="page-status">Page ${page} of ${pages}</p>
     <div class="pager-group">
       ${stepHtml("next", page + 1, last, "Next")}
-      ${stepHtml("next5", jumpPage(page, pages, PAGE_JUMP), last, `+${PAGE_JUMP}`, `Forward ${PAGE_JUMP} pages`)}
+      ${stepHtml("next5", jumpPage(page, pages, PAGE_JUMP), last, `${PAGE_JUMP}&gt;`, `Forward ${PAGE_JUMP} pages`)}
     </div>`;
 }
 

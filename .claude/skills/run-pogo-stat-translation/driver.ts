@@ -625,19 +625,19 @@ async function checkPaging(view: View, label: string): Promise<void> {
   }
 
   await STEPS.prev5(view);
-  await showing("−5 from page 3 stops on page 1", onPage({}, 1));
+  await showing("<5 from page 3 stops on page 1", onPage({}, 1));
   check("the first page can't jump back", await page.locator('#list-pager [data-step="prev5"]').isDisabled());
   await STEPS.next5(view);
-  await showing("+5 from page 1 shows page 6", onPage({}, 1 + PAGE_JUMP));
-  check("+5 is in the URL", (await pageNumber(page)) === 1 + PAGE_JUMP, await href(page));
+  await showing("5> from page 1 shows page 6", onPage({}, 1 + PAGE_JUMP));
+  check("5> is in the URL", (await pageNumber(page)) === 1 + PAGE_JUMP, await href(page));
   check(
-    "+5 keeps keyboard focus",
+    "5> keeps keyboard focus",
     await page.evaluate(
       () => document.activeElement instanceof HTMLElement && document.activeElement.dataset.step === "next5",
     ),
   );
   const jumpName = await page.locator('#list-pager [data-step="next5"]').getAttribute("aria-label");
-  check("+5's name starts with what it shows", jumpName === `+${PAGE_JUMP} pages`, String(jumpName));
+  check("5>'s name spells out what it does", jumpName === `Forward ${PAGE_JUMP} pages`, String(jumpName));
 
   // Legendaries doesn't divide evenly, so its last page shows a remainder.
   const category = "legendary";
@@ -654,7 +654,7 @@ async function checkPaging(view: View, label: string): Promise<void> {
 
   await goTo(view, `${base}?category=${category}&page=${last - 2}`);
   await STEPS.next5(view);
-  check("+5 near the end stops on the last page", (await pageNumber(page)) === last, await href(page));
+  check("5> near the end stops on the last page", (await pageNumber(page)) === last, await href(page));
 
   await goTo(view, `${base}?category=${category}&page=9999`);
   check("a page past the end falls back to the last", (await pageNumber(page)) === last, await href(page));

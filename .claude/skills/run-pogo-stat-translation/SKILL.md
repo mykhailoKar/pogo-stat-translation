@@ -67,7 +67,7 @@ It prints each step's result, then any console or network errors, which also mak
 | `search <text>` | Types in the search box |
 | `open <id>` | Opens or closes a row, such as `open garchomp` |
 | `next`, `prev` | Moves one page |
-| `next5`, `prev5` | Moves five pages with the +5 and −5 buttons, stopping at the first or last page |
+| `next5`, `prev5` | Moves five pages with the 5> and <5 buttons, stopping at the first or last page |
 | `page <n>` | Goes to a page. Uses its number if the pager shows it, otherwise walks there with `next5` or `prev5`, then `next` or `prev` |
 | `rows [n]` | Prints the first rows (default 5) |
 | `count`, `url`, `overflow` | Print the count line, the URL, and how far the page overflows sideways |
@@ -130,7 +130,7 @@ npm run verify
 - **A double-click's first click shows for a moment.** The click selects the category and the double-click then leaves it out, so the list redraws twice. Shift+click does it in one go.
 - **`sort` on the current column does nothing,** so `sort goFit` is safe to repeat. Clicking that heading in the page flips it, and `flip` does the same.
 - **`open <id>` only finds rows on the current page.** There are 10 per page, so search first. The id is the form's dataset id, such as `rayquaza-mega`.
-- **For a far page, use `goto ?page=50`.** `page 50` from page 1 clicks +5 nine times and Next four times, because the pager only shows nearby numbers.
+- **For a far page, use `goto ?page=50`.** `page 50` from page 1 clicks 5> nine times and Next four times, because the pager only shows nearby numbers.
 - **Below 700px the pager hides its numbers** and shows "Page X of Y" on a row of its own, so `page <n>` walks there.
 - **Percentile doesn't change between categories,** and Megas are ranked among themselves. Two forms showing 100.0 isn't a bug.
 - **Name sort uses the species,** so Mega Charizard X sits next to Charizard and the visible names won't look alphabetical.
