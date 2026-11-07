@@ -818,15 +818,13 @@ th[aria-sort="descending"] .arrow::after {
 }
 
 /* With room to spare, a form's types share its name's line, so ten rows and the pager fit a laptop screen. The
-   number columns give up a little width so most names and their type icons fit on one line. */
+   CP columns give up a little width so most names and their type icons fit on one line. The other number columns
+   keep theirs: any narrower, and "Defense Fit" wraps in wider fonts such as Linux's DejaVu Sans. 11% is the least
+   that holds an "11,467 Cut" in those fonts, which needs 6ch + 2.4rem + 16px. */
 @media (min-width: 1100px) {
   .types {
     display: inline;
     padding-left: 8px;
-  }
-
-  .list > thead th {
-    width: 9%;
   }
 
   .list .col-cpNow,
