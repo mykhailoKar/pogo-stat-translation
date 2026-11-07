@@ -2,6 +2,8 @@
 import {
   COLUMNS,
   PAGE_JUMP,
+  categoryStatus,
+  excludeCategory,
   filterRows,
   jumpPage,
   nextSort,
@@ -9,9 +11,11 @@ import {
   pageLinks,
   pageRows,
   paramsFromState,
+  selectCategory,
   sortRows,
   stateFromParams,
   type CategoryId,
+  type FilterId,
   type ListRow,
   type ListState,
   type SortKey,
@@ -180,6 +184,17 @@ function renderPager(page: number, pages: number): void {
     </div>`;
 }
 
+/** Shows each category as selected, left out or neither. */
+function renderCategories(): void {
+  for (const pill of categories.querySelectorAll<HTMLButtonElement>("button[data-category]")) {
+    const status = categoryStatus(state, pill.dataset.category as CategoryId);
+    pill.dataset.state = status;
+    pill.setAttribute("aria-pressed", String(status === "on"));
+    const note = pill.querySelector<HTMLElement>(".pill-excluded");
+    if (note) note.hidden = status !== "excluded";
+  }
+}
+
 function urlOf(next: ListState): string {
   const query = paramsFromState(next).toString();
   return query ? `${location.pathname}?${query}` : location.pathname;
@@ -193,6 +208,7 @@ function render(): void {
   empty.hidden = visible.length > 0;
   count.textContent = `${number.format(visible.length)} ${visible.length === 1 ? "form" : "forms"}`;
   renderHead();
+  renderCategories();
   renderPager(state.page, pages);
   history.replaceState(null, "", urlOf(state));
 }
@@ -216,9 +232,34 @@ function toggle(id: string, tr: HTMLTableRowElement): void {
   }
 }
 
-categories.addEventListener("change", (event) => {
-  const input = event.target as HTMLInputElement;
-  update({ category: input.value as CategoryId, page: 1 });
+/** The categories just before the latest single click, so a double-click can undo that click before it acts. */
+let beforeClick: { id: CategoryId; include: FilterId[]; exclude: FilterId[] } | null = null;
+
+function pillOf(event: Event): CategoryId | null {
+  const pill = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-category]");
+  return (pill?.dataset.category as CategoryId | undefined) ?? null;
+}
+
+// A click selects a category. Shift+click, Shift+Enter or Shift+Space leaves it out instead.
+categories.addEventListener("click", (event) => {
+  const id = pillOf(event);
+  // The second click of a double-click. The dblclick event that follows does the work.
+  if (!id || event.detail >= 2) return;
+  beforeClick = { id, include: state.include, exclude: state.exclude };
+  state = event.shiftKey ? excludeCategory(state, id) : selectCategory(state, id);
+  render();
+});
+
+// The first click already toggled the category, so start from before it: a double-click always leaves a
+// category out, or brings back one that was left out.
+categories.addEventListener("dblclick", (event) => {
+  const id = pillOf(event);
+  if (!id) return;
+  const before = beforeClick?.id === id ? beforeClick : null;
+  const base = before ? { ...state, include: before.include, exclude: before.exclude } : state;
+  state = excludeCategory(base, id);
+  beforeClick = null;
+  render();
 });
 
 search.addEventListener("input", () => update({ query: search.value, page: 1 }));
@@ -242,7 +283,6 @@ pager.addEventListener("click", (event) => {
 window.addEventListener("popstate", () => {
   state = stateFromParams(new URLSearchParams(location.search));
   search.value = state.query;
-  syncCategoryInput();
   render();
 });
 
@@ -273,16 +313,9 @@ body.addEventListener("click", (event) => {
 
 element("list-clear").addEventListener("click", () => {
   search.value = "";
-  update({ query: "", category: "all", page: 1 });
-  syncCategoryInput();
+  update({ query: "", include: [], exclude: [], page: 1 });
   search.focus();
 });
 
-function syncCategoryInput(): void {
-  const input = categories.querySelector<HTMLInputElement>(`input[value="${state.category}"]`);
-  if (input) input.checked = true;
-}
-
 search.value = state.query;
-syncCategoryInput();
 render();

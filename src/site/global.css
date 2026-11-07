@@ -167,8 +167,16 @@ main {
 
 .categories {
   margin: 0 0 10px;
-  padding: 0;
-  border: 0;
+}
+
+/* Ends the row of pills where there's room, so it costs no height on a laptop, and wraps below them on phones. */
+.categories-hint {
+  align-self: center;
+  margin: 0 0 0 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  text-align: center;
 }
 
 .pills {
@@ -179,19 +187,6 @@ main {
 }
 
 .pill {
-  position: relative;
-  cursor: pointer;
-}
-
-.pill input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.pill span {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -200,8 +195,15 @@ main {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
+  color: var(--ink);
+  font: inherit;
   font-size: 0.92rem;
   font-weight: 600;
+  cursor: pointer;
+  /* A double tap leaves a category out, so it mustn't zoom the page, and a double-click mustn't select the label. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .pill small {
@@ -211,23 +213,39 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
-.pill:hover span {
+.pill:hover {
   border-color: var(--accent);
 }
 
-.pill input:checked + span {
+.pill[aria-pressed="true"] {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--on-accent);
 }
 
-.pill input:checked + span small {
+.pill[aria-pressed="true"] small {
   color: inherit;
 }
 
-.pill input:focus-visible + span {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.pill-mark {
+  display: none;
+}
+
+/* Left out: dashed, struck through and marked with a minus, so it reads as removed without relying on colour. */
+.pill[data-state="excluded"] {
+  border-style: dashed;
+  border-color: var(--muted);
+  background: transparent;
+  color: var(--muted);
+}
+
+.pill[data-state="excluded"] .pill-mark {
+  display: inline;
+  margin-right: -2px;
+}
+
+.pill[data-state="excluded"] .pill-label {
+  text-decoration: line-through;
 }
 
 .toolbar {

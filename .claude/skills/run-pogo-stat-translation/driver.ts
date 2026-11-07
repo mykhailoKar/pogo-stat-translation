@@ -14,17 +14,20 @@ import { parseArgs } from "node:util";
 import { chromium, type Browser, type BrowserContext, type Page, type Response } from "playwright-core";
 import config from "../../../astro.config.ts";
 import {
+  CATEGORIES,
   COLUMNS,
   DEFAULT_STATE,
   PAGE_JUMP,
   PAGE_SIZE,
   categoryCounts,
+  categoryStatus,
   filterRows,
   pageCount,
   pageRows,
   sortRows,
   stateFromParams,
   toListRow,
+  type FilterId,
   type ListRow,
   type ListState,
 } from "../../../src/lib/list.ts";
@@ -237,8 +240,13 @@ const STEPS = {
     view.theme = themeFrom(value);
     await view.page.emulateMedia({ colorScheme: view.theme });
   },
+  /** Clicks a category, which adds it to the selection or takes it away. `all` clears every choice. */
   async category(view: View, id: string) {
-    await view.page.locator(`.pill:has(input[value="${id}"])`).click();
+    await view.page.locator(`.pill[data-category="${id}"]`).click();
+  },
+  /** Double-clicks a category, which leaves it out, or brings it back if it was left out. */
+  async exclude(view: View, id: string) {
+    await view.page.locator(`.pill[data-category="${id}"]`).dblclick();
   },
   /** Picks a column in whichever control this layout shows. Naming the current column does nothing. */
   async sort(view: View, key: string) {
@@ -355,6 +363,88 @@ const allNames = (page: Page) => page.locator("#list-body tr.row .name-text").al
 const countText = async (page: Page) => (await page.locator("#list-count").textContent()) ?? "";
 const pageNumber = async (page: Page) => (await urlState(page)).page;
 
+/** The pills, the count and the URL all match these categories. */
+async function showingCategories(view: View, name: string, partial: Partial<ListState>): Promise<void> {
+  const { page } = view;
+  const state = { ...DEFAULT_STATE, ...partial };
+  const want = forms(visible(partial).length);
+  check(name, (await countText(page)) === want, `${await countText(page)}, wanted ${want}`);
+  const pills = await page.$$eval(".pill", (els) =>
+    els.map((el) =>
+      [el.getAttribute("data-category"), el.getAttribute("data-state"), el.getAttribute("aria-pressed")].join(":"),
+    ),
+  );
+  const wantPills = CATEGORIES.map(({ id }) => {
+    const status = categoryStatus(state, id);
+    return `${id}:${status}:${status === "on"}`;
+  });
+  check(`${name}: pills`, String(pills) === String(wantPills), String(pills));
+  const left = await page.$$eval(".pill .pill-excluded:not([hidden])", (els) =>
+    els.map((el) => el.closest(".pill")?.getAttribute("data-category")),
+  );
+  check(`${name}: screen readers hear what's left out`, String(left) === String(state.exclude), String(left));
+  const url = await urlState(page);
+  check(
+    `${name}: in the URL`,
+    String(url.include) === String(state.include) && String(url.exclude) === String(state.exclude),
+    await href(page),
+  );
+}
+
+/** Selecting, combining and leaving out categories, with the mouse and the keyboard. */
+async function checkCategories(view: View): Promise<void> {
+  const { page } = view;
+  for (const { id } of CATEGORIES) {
+    if (id === "all") continue;
+    await STEPS.category(view, id);
+    check(`category ${id}`, (await countText(page)) === forms(counts[id]), await countText(page));
+    await showingCategories(view, `category ${id}`, { include: [id] });
+    await STEPS.category(view, id);
+    check(`category ${id} twice: back to all, clean URL`, !(await href(page)).includes("?"), await href(page));
+  }
+
+  const both: FilterId[] = ["legendary", "mythical"];
+  await STEPS.category(view, "legendary");
+  await STEPS.category(view, "mythical");
+  await showingCategories(view, "two categories", { include: both });
+  await STEPS.exclude(view, "mega");
+  await showingCategories(view, "two categories without Megas", { include: both, exclude: ["mega"] });
+  await STEPS.category(view, "all");
+  await showingCategories(view, "All species clears every choice", {});
+  check("All species: clean URL", !(await href(page)).includes("?"), await href(page));
+
+  await STEPS.exclude(view, "mega");
+  await showingCategories(view, "every form but the Megas", { exclude: ["mega"] });
+  await STEPS.exclude(view, "starter");
+  await showingCategories(view, "two left out", { exclude: ["mega", "starter"] });
+  await STEPS.exclude(view, "mega");
+  await showingCategories(view, "a second double-click brings one back", { exclude: ["starter"] });
+  await STEPS.category(view, "starter");
+  await showingCategories(view, "a click brings a left-out one back", {});
+
+  await STEPS.category(view, "legendary");
+  await STEPS.exclude(view, "legendary");
+  await showingCategories(view, "double-clicking a selected category leaves it out", { exclude: ["legendary"] });
+  await STEPS.category(view, "legendary");
+
+  await page.locator('.pill[data-category="starter"]').click({ modifiers: ["Shift"] });
+  await showingCategories(view, "Shift+click leaves one out", { exclude: ["starter"] });
+  await page.locator('.pill[data-category="mythical"]').focus();
+  await page.keyboard.press("Shift+Enter");
+  await showingCategories(view, "Shift+Enter leaves one out", { exclude: ["mythical", "starter"] });
+  await page.keyboard.press("Enter");
+  await showingCategories(view, "Enter brings it back", { exclude: ["starter"] });
+  await page.keyboard.press("Enter");
+  await showingCategories(view, "Enter selects", { include: ["mythical"], exclude: ["starter"] });
+  check(
+    "keyboard focus stays on the pill",
+    await page.evaluate(() => document.activeElement?.getAttribute("data-category") === "mythical"),
+  );
+
+  await STEPS.category(view, "all");
+  check("back to all, clean URL", !(await href(page)).includes("?"), await href(page));
+}
+
 /** Everything that doesn't depend on the theme, so it only runs once per size. */
 async function checkControls(view: View, label: string): Promise<void> {
   const { page, base } = view;
@@ -384,15 +474,7 @@ async function checkControls(view: View, label: string): Promise<void> {
   const icon = await page.locator("#list-body .type-icon").first().boundingBox();
   check("type icons have a size", icon !== null && icon.width >= 10 && icon.width <= 20, `${icon?.width}px`);
 
-  for (const [id, total] of Object.entries(counts)) {
-    if (id === "all") continue;
-    await STEPS.category(view, id);
-    check(`category ${id}`, (await countText(page)) === forms(total), await countText(page));
-    check(`category ${id}: one selected`, (await page.locator('input[name="category"]:checked').count()) === 1);
-    check(`category ${id}: in the URL`, (await urlState(page)).category === id, await href(page));
-  }
-  await STEPS.category(view, "all");
-  check("back to all, clean URL", !(await href(page)).includes("?"), await href(page));
+  await checkCategories(view);
 
   for (const { key, first } of COLUMNS) {
     for (const direction of [first, first === "asc" ? "desc" : "asc"] as const) {
@@ -417,14 +499,21 @@ async function checkControls(view: View, label: string): Promise<void> {
     }
   }
 
-  const restored: Partial<ListState> = { category: "starter", sort: "name", direction: "desc", query: "char" };
+  // A link from before categories could combine, with one category.
+  const restored: Partial<ListState> = { include: ["starter"], sort: "name", direction: "desc", query: "char" };
   await goTo(view, `${base}?category=starter&sort=name&direction=desc&q=char`);
   check("state restored from the URL", (await firstName(page)) === firstOf(restored), String(await firstName(page)));
   check(
     "restored category and search",
-    (await page.locator('input[value="starter"]').isChecked()) && (await page.inputValue("#list-search")) === "char",
+    (await page.locator('.pill[data-category="starter"]').getAttribute("aria-pressed")) === "true" &&
+      (await page.inputValue("#list-search")) === "char",
   );
   check("restored count", (await countText(page)) === forms(visible(restored).length), await countText(page));
+  await goTo(view, `${base}?category=legendary&category=mythical&exclude=mega`);
+  await showingCategories(view, "combined categories restored from the URL", {
+    include: ["legendary", "mythical"],
+    exclude: ["mega"],
+  });
   await goTo(view, base);
 
   for (const query of ["flabebe", "6", "farfetchd"]) {
@@ -474,7 +563,7 @@ async function checkControls(view: View, label: string): Promise<void> {
     const small = await page.evaluate(() =>
       [
         ...document.querySelectorAll<HTMLElement>(
-          ".pill span, #list-search, #list-sort, #list-direction, #list-pager button, .site-footer a",
+          ".pill, #list-search, #list-sort, #list-direction, #list-pager button, .site-footer a",
         ),
       ]
         .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height < 38)
@@ -548,7 +637,7 @@ async function checkPaging(view: View, label: string): Promise<void> {
   const category = "legendary";
   const last = pageCount(counts[category]);
   await goTo(view, `${base}?category=${category}&page=${last}`);
-  await showing("the URL restores a page, with the remainder on the last", onPage({ category }, last));
+  await showing("the URL restores a page, with the remainder on the last", onPage({ include: [category] }, last));
   check("the last page can't go forward", await page.locator('#list-pager [data-step="next"]').isDisabled());
   check("the last page can't jump forward", await page.locator('#list-pager [data-step="next5"]').isDisabled());
   check(

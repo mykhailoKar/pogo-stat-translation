@@ -47,6 +47,11 @@ export const CATEGORIES = [
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
 
+/** A category that can be selected or left out. "all" is neither: it's what the list shows with no choice made. */
+export type FilterId = Exclude<CategoryId, "all">;
+
+const FILTER_IDS = CATEGORIES.map((category) => category.id).filter((id): id is FilterId => id !== "all");
+
 export type Direction = "asc" | "desc";
 
 /** Everything the list can sort by, in display order. */
@@ -101,14 +106,24 @@ export const COLUMNS = [
 export type SortKey = (typeof COLUMNS)[number]["key"];
 
 export interface ListState {
-  category: CategoryId;
+  /** Categories to show: a form shows if it's in any of them. Empty shows every form. */
+  include: FilterId[];
+  /** Categories to leave out, even when the form is also in an included one. */
+  exclude: FilterId[];
   sort: SortKey;
   direction: Direction;
   query: string;
   page: number;
 }
 
-export const DEFAULT_STATE: ListState = { category: "all", sort: "goFit", direction: "desc", query: "", page: 1 };
+export const DEFAULT_STATE: ListState = {
+  include: [],
+  exclude: [],
+  sort: "goFit",
+  direction: "desc",
+  query: "",
+  page: 1,
+};
 
 export const PAGE_SIZE = 10;
 
@@ -151,6 +166,48 @@ export function inCategory(row: ListRow, category: CategoryId): boolean {
   return row.tags.includes(category);
 }
 
+/** In any included category, or every form when none is included, and in no excluded category. */
+export function inCategories(row: ListRow, state: Pick<ListState, "include" | "exclude">): boolean {
+  if (state.exclude.some((id) => inCategory(row, id))) return false;
+  return state.include.length === 0 || state.include.some((id) => inCategory(row, id));
+}
+
+export type CategoryStatus = "on" | "off" | "excluded";
+
+/** How a category's pill shows. All species is on only when no category is selected or left out. */
+export function categoryStatus(state: Pick<ListState, "include" | "exclude">, id: CategoryId): CategoryStatus {
+  if (id === "all") return state.include.length === 0 && state.exclude.length === 0 ? "on" : "off";
+  if (state.exclude.includes(id)) return "excluded";
+  return state.include.includes(id) ? "on" : "off";
+}
+
+/** Keeps categories in the pills' order, once each, so equal choices give equal URLs. */
+function ordered(ids: readonly FilterId[]): FilterId[] {
+  return FILTER_IDS.filter((id) => ids.includes(id));
+}
+
+const without = (ids: readonly FilterId[], id: FilterId) => ids.filter((other) => other !== id);
+
+/**
+ * A click on a category. All species clears every choice. A selected or left-out category goes back to neither,
+ * and any other is added to the selection. The list starts over at page 1.
+ */
+export function selectCategory(state: ListState, id: CategoryId): ListState {
+  const page = DEFAULT_STATE.page;
+  if (id === "all") return { ...state, include: [], exclude: [], page };
+  if (state.include.includes(id)) return { ...state, include: without(state.include, id), page };
+  if (state.exclude.includes(id)) return { ...state, exclude: without(state.exclude, id), page };
+  return { ...state, include: ordered([...state.include, id]), page };
+}
+
+/** A double-click on a category: leaves it out, or brings it back if it was left out. All species can't be. */
+export function excludeCategory(state: ListState, id: CategoryId): ListState {
+  if (id === "all") return state;
+  const page = DEFAULT_STATE.page;
+  if (state.exclude.includes(id)) return { ...state, exclude: without(state.exclude, id), page };
+  return { ...state, include: without(state.include, id), exclude: ordered([...state.exclude, id]), page };
+}
+
 export function categoryCounts(rows: readonly ListRow[]): Record<CategoryId, number> {
   const counts = {} as Record<CategoryId, number>;
   for (const { id } of CATEGORIES) counts[id] = rows.filter((row) => inCategory(row, id)).length;
@@ -177,7 +234,7 @@ export function matchesQuery(row: ListRow, query: string): boolean {
 }
 
 export function filterRows(rows: readonly ListRow[], state: ListState): ListRow[] {
-  return rows.filter((row) => inCategory(row, state.category) && matchesQuery(row, state.query));
+  return rows.filter((row) => inCategories(row, state) && matchesQuery(row, state.query));
 }
 
 const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
@@ -244,23 +301,37 @@ export function nextSort(state: ListState, key: SortKey): ListState {
   return { ...state, sort: key, direction: firstDirection(key), page: DEFAULT_STATE.page };
 }
 
-function isCategory(value: string | null): value is CategoryId {
-  return CATEGORIES.some((category) => category.id === value);
+function isFilterId(value: string): value is FilterId {
+  return FILTER_IDS.some((id) => id === value);
+}
+
+/** Every value of a repeated parameter, also split at commas, keeping the known categories. */
+function filterIds(params: URLSearchParams, name: string): FilterId[] {
+  return ordered(
+    params
+      .getAll(name)
+      .flatMap((value) => value.split(","))
+      .filter(isFilterId),
+  );
 }
 
 function isSortKey(value: string | null): value is SortKey {
   return COLUMNS.some((column) => column.key === value);
 }
 
-/** Reads the list's state from the URL. Anything missing or unknown keeps its default. */
+/**
+ * Reads the list's state from the URL. Anything missing or unknown keeps its default. Categories repeat, as in
+ * `?category=legendary&category=mythical&exclude=mega`, so a link from before they could combine still works.
+ */
 export function stateFromParams(params: URLSearchParams): ListState {
-  const category = params.get("category");
+  const exclude = filterIds(params, "exclude");
   const sort = params.get("sort");
   const direction = params.get("direction");
   const page = Number(params.get("page"));
   const key = isSortKey(sort) ? sort : DEFAULT_STATE.sort;
   return {
-    category: isCategory(category) ? category : DEFAULT_STATE.category,
+    include: filterIds(params, "category").filter((id) => !exclude.includes(id)),
+    exclude,
     sort: key,
     direction:
       direction === "asc" || direction === "desc"
@@ -276,7 +347,8 @@ export function stateFromParams(params: URLSearchParams): ListState {
 /** Writes only what differs from the defaults, so the plain list keeps a clean URL. */
 export function paramsFromState(state: ListState): URLSearchParams {
   const params = new URLSearchParams();
-  if (state.category !== DEFAULT_STATE.category) params.set("category", state.category);
+  for (const id of ordered(state.include)) params.append("category", id);
+  for (const id of ordered(state.exclude)) params.append("exclude", id);
   if (state.sort !== DEFAULT_STATE.sort) params.set("sort", state.sort);
   if (state.direction !== firstDirection(state.sort)) params.set("direction", state.direction);
   if (state.query !== "") params.set("q", state.query);
