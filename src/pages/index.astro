@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import { CATEGORIES, COLUMNS, DEFAULT_STATE, categoryCounts, toListRow } from "../lib/list.ts";
+import { typeSymbols } from "../lib/type-icons.ts";
 import { loadDataset } from "../site/load-dataset.ts";
 
 const dataset = loadDataset();
@@ -108,6 +109,7 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
     </button>
   </div>
 
+  <svg class="sprite" id="type-icons" aria-hidden="true" focusable="false" set:html={typeSymbols()} />
   <script is:inline type="application/json" id="list-data" set:html={json} />
   <script src="../site/list-page.ts"></script>
 </Base>

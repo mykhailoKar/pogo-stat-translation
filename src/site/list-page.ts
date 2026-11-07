@@ -14,6 +14,7 @@ import {
   type ListState,
   type SortKey,
 } from "../lib/list.ts";
+import { isTypeName } from "../lib/type-icons.ts";
 import type { GoStats, MsStats } from "../lib/types.ts";
 
 function element<T extends HTMLElement>(id: string): T {
@@ -46,6 +47,14 @@ function escapeHtml(text: string): string {
 
 function capitalize(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/** A type's name with its icon, which points into the sprite in the page. Screen readers get the name alone. */
+function typeHtml(type: string): string {
+  const icon = isTypeName(type)
+    ? `<svg class="type-icon" aria-hidden="true" focusable="false"><use href="#type-${type}"></use></svg>`
+    : "";
+  return `<span class="type">${icon}${capitalize(type)}</span>`;
 }
 
 function percent(value: number): string {
@@ -103,7 +112,7 @@ function cutBadge(adjustment: number): string {
 
 function rowHtml(row: ListRow): string {
   const isOpen = open.has(row.id);
-  const types = row.types.map(capitalize).join(" / ");
+  const types = row.types.map(typeHtml).join(" ");
   const predicted = row.predicted
     ? `<span class="badge" title="Not in GO data yet; GO stats are predicted">Predicted</span>`
     : "";

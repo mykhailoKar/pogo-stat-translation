@@ -357,6 +357,29 @@ async function checkControls(view: View, label: string): Promise<void> {
   const cards = await cardsLayout(page);
   const shot = (name: string) => page.screenshot({ path: join(view.out, `${label}-${name}.png`) });
 
+  // Each row shows one icon per type, and each icon points at a symbol the page really has.
+  const shown = await page.$$eval("#list-body tr.row", (trs) =>
+    trs.map((tr) => {
+      const uses = [...tr.querySelectorAll(".types use")];
+      return {
+        id: tr.getAttribute("data-id") ?? "",
+        types: [...tr.querySelectorAll(".types .type")].map((span) => span.textContent?.toLowerCase()),
+        icons: uses.map((use) => use.getAttribute("href")),
+        missing: uses.filter((use) => !document.querySelector(use.getAttribute("href") ?? "#none")).length,
+      };
+    }),
+  );
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const wrongIcons = shown.filter(
+    ({ id, types, icons, missing }) =>
+      String(types) !== String(byId.get(id)?.types) ||
+      String(icons) !== String(types.map((type) => `#type-${type}`)) ||
+      missing > 0,
+  );
+  check("every type shows its icon", shown.length > 0 && wrongIcons.length === 0, JSON.stringify(wrongIcons));
+  const icon = await page.locator("#list-body .type-icon").first().boundingBox();
+  check("type icons have a size", icon !== null && icon.width >= 10 && icon.width <= 20, `${icon?.width}px`);
+
   for (const [id, total] of Object.entries(counts)) {
     if (id === "all") continue;
     await STEPS.category(view, id);
