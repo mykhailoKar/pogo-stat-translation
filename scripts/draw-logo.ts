@@ -5,6 +5,9 @@
 // Defense and Sp. Def. HP alone becomes Stamina, each pair merges, and Speed splits to boost Attack and Defense.
 // SVG strokes can't change width, so every strand is a filled ribbon that widens as it moves right, and all
 // three bands finish at the same thickness.
+//
+// The drawing is square. The six strands are evenly spaced, and so are the three bands. Both columns share the
+// same top and bottom edge, so HP runs into Stamina along one straight line, and Sp. Def into Defense along another.
 import { writeFileSync } from "node:fs";
 
 interface Layout {
@@ -12,7 +15,11 @@ interface Layout {
   w0: number;
   /** Width of each finished band on the right. */
   W: number;
-  /** Where the bands end. */
+  /** The drawing's edges. Both columns of strands span top to bottom exactly. */
+  top: number;
+  bottom: number;
+  /** Where the strands' round ends start, and where the bands' round ends finish. */
+  xStart: number;
   xEnd: number;
   /** Where Atk meets SpA and Def meets SpD. */
   xMerge: number;
@@ -22,26 +29,42 @@ interface Layout {
   xSplit: number;
   /** How much of the Attack and Defense bands' width Speed supplies. */
   speedShare: number;
-  /** Strand centres on the left. */
-  left: { hp: number; atk: number; spa: number; spe: number; def: number; spd: number };
-  /** Band centres on the right. */
-  right: { stamina: number; attack: number; defense: number };
 }
 
 const HEADER: Layout = {
   w0: 3,
   W: 9,
+  top: 2,
+  bottom: 62,
+  xStart: 2,
   xEnd: 62,
   xMerge: 42,
   xSpeed: 56,
   xSplit: 16,
   speedShare: 2.4,
-  left: { hp: 6, atk: 15.5, spa: 25, spe: 34.5, def: 44, spd: 53.5 },
-  right: { stamina: 6, attack: 23.5, defense: 45.5 },
 };
 
 // Thicker strands, so they don't blur away at 16px.
 const FAVICON: Layout = { ...HEADER, w0: 4.4, W: 11, speedShare: 3, xSpeed: 54 };
+
+/** Strand centres on the left and band centres on the right, evenly spaced between the drawing's edges. */
+function centres({ w0, W, top, bottom }: Layout) {
+  const step = (bottom - top - w0) / 5;
+  const [hp, atk, spa, spe, def, spd] = [0, 1, 2, 3, 4, 5].map((i) => top + w0 / 2 + i * step) as [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
+  const stamina = top + W / 2;
+  const defense = bottom - W / 2;
+  return {
+    left: { hp, atk, spa, spe, def, spd },
+    right: { stamina, attack: (stamina + defense) / 2, defense },
+  };
+}
 const FAVICON_COLOURS = { from: "#7fb9b1", to: "#5fe0cf", speed: "#c4f5ec", background: "#10353a" };
 
 const r = (n: number) => Math.round(n * 10) / 10;
@@ -78,8 +101,11 @@ const rect = (x0: number, y0: number, x1: number, y1: number) => `M${r(x0)} ${r(
 
 /** The strands as two path outlines: `main` for the six stats and their bands, `boost` for Speed's branches. */
 function shapes(p: Layout): { main: string; boost: string } {
-  const { w0, W, xEnd, xMerge, xSpeed, xSplit, speedShare, left, right } = p;
+  const { w0, W, xStart, xEnd, xMerge, xSpeed, xSplit, speedShare } = p;
+  const { left, right } = centres(p);
   const half = w0 / 2;
+  // The round ends' centres, so the drawing starts at xStart.
+  const x0 = xStart + half;
   const span = (y: number) => ({ a0: y - half, b0: y + half });
   const pairShare = W - speedShare;
   const main: string[] = [];
@@ -88,7 +114,7 @@ function shapes(p: Layout): { main: string; boost: string } {
   // HP: alone, widening into the top band.
   main.push(
     ribbon({
-      x0: 3,
+      x0,
       ...span(left.hp),
       x1: xSpeed,
       a1: right.stamina - W / 2,
@@ -101,15 +127,15 @@ function shapes(p: Layout): { main: string; boost: string } {
   const aTop = right.attack - W / 2;
   const aMid = aTop + pairShare / 2;
   const aLow = aTop + pairShare;
-  main.push(ribbon({ x0: 3, ...span(left.atk), x1: xMerge, a1: aTop, b1: aMid + 0.4, roundLeft: true }));
-  main.push(ribbon({ x0: 3, ...span(left.spa), x1: xMerge, a1: aMid - 0.4, b1: aLow, roundLeft: true }));
+  main.push(ribbon({ x0, ...span(left.atk), x1: xMerge, a1: aTop, b1: aMid + 0.4, roundLeft: true }));
+  main.push(ribbon({ x0, ...span(left.spa), x1: xMerge, a1: aMid - 0.4, b1: aLow, roundLeft: true }));
 
   // Defense: Def and SpD meet in the lower part of the band, leaving its upper edge for Speed.
   const dBottom = right.defense + W / 2;
   const dMid = dBottom - pairShare / 2;
   const dHigh = dBottom - pairShare;
-  main.push(ribbon({ x0: 3, ...span(left.def), x1: xMerge, a1: dHigh, b1: dMid + 0.4, roundLeft: true }));
-  main.push(ribbon({ x0: 3, ...span(left.spd), x1: xMerge, a1: dMid - 0.4, b1: dBottom, roundLeft: true }));
+  main.push(ribbon({ x0, ...span(left.def), x1: xMerge, a1: dHigh, b1: dMid + 0.4, roundLeft: true }));
+  main.push(ribbon({ x0, ...span(left.spd), x1: xMerge, a1: dMid - 0.4, b1: dBottom, roundLeft: true }));
 
   // Bands, each starting where its ribbons finish. The small overlaps hide hairline seams.
   main.push(band(xSpeed - 0.5, xEnd, right.stamina, W));
@@ -120,7 +146,9 @@ function shapes(p: Layout): { main: string; boost: string } {
 
   // Speed: one strand that splits in two and feeds both bands from the inside.
   const s = left.spe;
-  boost.push(`M3 ${r(s - half)}H${r(xSplit)}V${r(s + half)}H3A${r(half)} ${r(half)} 0 0 1 3 ${r(s - half)}Z`);
+  boost.push(
+    `M${r(x0)} ${r(s - half)}H${r(xSplit)}V${r(s + half)}H${r(x0)}A${r(half)} ${r(half)} 0 0 1 ${r(x0)} ${r(s - half)}Z`,
+  );
   boost.push(
     ribbon({ x0: xSplit - 0.5, a0: s - half, b0: s + 0.3, x1: xSpeed + 1, a1: aLow - 1.5, b1: right.attack + W / 2 }),
   );
@@ -140,9 +168,10 @@ const logo = `---
 // Generated by scripts/draw-logo.ts. Edit that script and run \`npm run draw:logo\`; don't edit this file.
 // Six strands become three, following GO's formula. Top to bottom on the left they're HP, Attack, Sp. Atk, Speed,
 // Defense and Sp. Def. HP alone becomes Stamina, each pair merges, and Speed splits to boost GO Attack and GO Defense.
+// Both columns share one top and one bottom edge, and the drawing is square.
 ---
 
-<svg class="logo-mark" viewBox="0 0 64 56" aria-hidden="true" focusable="false">
+<svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="logo-strand" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="0">
       <stop offset="0" stop-color="var(--logo-from)"></stop>
@@ -158,10 +187,10 @@ const logo = `---
 </svg>
 `;
 
-// The favicon can't read the page's CSS, so its colours are fixed. The 64×56 drawing is scaled to 80% and centred.
+// The favicon can't read the page's CSS, so its colours are fixed. The 64×64 drawing is scaled to 80% and centred.
 const icon = shapes(FAVICON);
 const c = FAVICON_COLOURS;
-const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="m" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="0"><stop offset="0" stop-color="${c.from}"/><stop offset=".75" stop-color="${c.to}"/></linearGradient><linearGradient id="s" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="0"><stop offset=".45" stop-color="${c.speed}"/><stop offset=".82" stop-color="${c.to}"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="${c.background}"/><g transform="translate(6.4 9.6) scale(.8)"><path fill="url(#s)" d="${icon.boost}"/><path fill="url(#m)" d="${icon.main}"/></g></svg>
+const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="m" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="0"><stop offset="0" stop-color="${c.from}"/><stop offset=".75" stop-color="${c.to}"/></linearGradient><linearGradient id="s" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="0"><stop offset=".45" stop-color="${c.speed}"/><stop offset=".82" stop-color="${c.to}"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="${c.background}"/><g transform="translate(6.4 6.4) scale(.8)"><path fill="url(#s)" d="${icon.boost}"/><path fill="url(#m)" d="${icon.main}"/></g></svg>
 `;
 
 const root = new URL("../", import.meta.url);
