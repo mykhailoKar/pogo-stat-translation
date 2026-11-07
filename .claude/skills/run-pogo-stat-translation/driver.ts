@@ -16,6 +16,7 @@ import config from "../../../astro.config.ts";
 import {
   COLUMNS,
   DEFAULT_STATE,
+  PAGE_JUMP,
   PAGE_SIZE,
   categoryCounts,
   filterRows,
@@ -257,7 +258,9 @@ const STEPS = {
   },
   next: (view: View) => view.page.click('#list-pager [data-step="next"]'),
   prev: (view: View) => view.page.click('#list-pager [data-step="prev"]'),
-  /** Uses the page's number when the pager shows it, and otherwise walks there with Next or Previous. */
+  next5: (view: View) => view.page.click('#list-pager [data-step="next5"]'),
+  prev5: (view: View) => view.page.click('#list-pager [data-step="prev5"]'),
+  /** Uses the page's number when the pager shows it, and otherwise walks there, five pages at a time while it can. */
   async page(view: View, target: string) {
     const want = Number(target);
     const link = view.page.locator(`#list-pager .pages button[data-page="${want}"]`);
@@ -266,7 +269,8 @@ const STEPS = {
       return;
     }
     for (let now = (await urlState(view.page)).page; now !== want; now = (await urlState(view.page)).page) {
-      await view.page.click(`#list-pager [data-step="${now < want ? "next" : "prev"}"]`);
+      const far = Math.abs(want - now) >= PAGE_JUMP ? "5" : "";
+      await view.page.click(`#list-pager [data-step="${now < want ? "next" : "prev"}${far}"]`);
     }
   },
   async rows(view: View, limit = "5") {
@@ -525,17 +529,37 @@ async function checkPaging(view: View, label: string): Promise<void> {
     check("the pager says which page this is", status === `Page 3 of ${pageCount(rows.length)}`, String(status));
   }
 
+  await STEPS.prev5(view);
+  await showing("−5 from page 3 stops on page 1", onPage({}, 1));
+  check("the first page can't jump back", await page.locator('#list-pager [data-step="prev5"]').isDisabled());
+  await STEPS.next5(view);
+  await showing("+5 from page 1 shows page 6", onPage({}, 1 + PAGE_JUMP));
+  check("+5 is in the URL", (await pageNumber(page)) === 1 + PAGE_JUMP, await href(page));
+  check(
+    "+5 keeps keyboard focus",
+    await page.evaluate(
+      () => document.activeElement instanceof HTMLElement && document.activeElement.dataset.step === "next5",
+    ),
+  );
+  const jumpName = await page.locator('#list-pager [data-step="next5"]').getAttribute("aria-label");
+  check("+5's name starts with what it shows", jumpName === `+${PAGE_JUMP} pages`, String(jumpName));
+
   // Legendaries doesn't divide evenly, so its last page shows a remainder.
   const category = "legendary";
   const last = pageCount(counts[category]);
   await goTo(view, `${base}?category=${category}&page=${last}`);
   await showing("the URL restores a page, with the remainder on the last", onPage({ category }, last));
   check("the last page can't go forward", await page.locator('#list-pager [data-step="next"]').isDisabled());
+  check("the last page can't jump forward", await page.locator('#list-pager [data-step="next5"]').isDisabled());
   check(
     "the last page is short",
     (await allNames(page)).length === counts[category] % PAGE_SIZE,
     String((await allNames(page)).length),
   );
+
+  await goTo(view, `${base}?category=${category}&page=${last - 2}`);
+  await STEPS.next5(view);
+  check("+5 near the end stops on the last page", (await pageNumber(page)) === last, await href(page));
 
   await goTo(view, `${base}?category=${category}&page=9999`);
   check("a page past the end falls back to the last", (await pageNumber(page)) === last, await href(page));

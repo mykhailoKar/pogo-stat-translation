@@ -66,7 +66,8 @@ It prints each step's result, then any console or network errors, which also mak
 | `search <text>` | Types in the search box |
 | `open <id>` | Opens or closes a row, such as `open garchomp` |
 | `next`, `prev` | Moves one page |
-| `page <n>` | Goes to a page. Uses its number if the pager shows it, otherwise walks there with `next` or `prev` |
+| `next5`, `prev5` | Moves five pages with the +5 and −5 buttons, stopping at the first or last page |
+| `page <n>` | Goes to a page. Uses its number if the pager shows it, otherwise walks there with `next5` or `prev5`, then `next` or `prev` |
 | `rows [n]` | Prints the first rows (default 5) |
 | `count`, `url`, `overflow` | Print the count line, the URL, and how far the page overflows sideways |
 | `goto <path>` | Relative to the site, such as `goto about/` or `goto ?category=mega&q=char` |
@@ -126,7 +127,8 @@ npm run verify
 - **`localhost` differs by OS.** On Linux, Astro binds it to `::1` only, and Node's `fetch` tries `127.0.0.1` and is refused, while `curl` still works. The driver avoids this by passing `--host 127.0.0.1`.
 - **`sort` on the current column does nothing,** so `sort goFit` is safe to repeat. Clicking that heading in the page flips it, and `flip` does the same.
 - **`open <id>` only finds rows on the current page.** There are 10 per page, so search first. The id is the form's dataset id, such as `rayquaza-mega`.
-- **For a far page, use `goto ?page=50`.** `page 50` from page 1 clicks Next 49 times, because the pager only shows nearby numbers.
+- **For a far page, use `goto ?page=50`.** `page 50` from page 1 clicks +5 nine times and Next four times, because the pager only shows nearby numbers.
+- **Below 700px the pager hides its numbers** and shows "Page X of Y" on a row of its own, so `page <n>` walks there.
 - **Percentile doesn't change between categories,** and Megas are ranked among themselves. Two forms showing 100.0 isn't a bug.
 - **Name sort uses the species,** so Mega Charizard X sits next to Charizard and the visible names won't look alphabetical.
 - **Headings look thin in a Linux container.** The page falls back to WenQuanYi Zen Hei there, which has no bold, although the CSS still says 700. It isn't a site bug, so judge layout from those screenshots, not type weight.

@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   DEFAULT_STATE,
+  PAGE_JUMP,
   PAGE_SIZE,
   categoryCounts,
   filterRows,
   inCategory,
+  jumpPage,
   matchesQuery,
   nextSort,
   pageCount,
@@ -235,6 +237,19 @@ describe("pages", () => {
   it("shows a lone skipped page rather than a gap", () => {
     assert.deepEqual(pageLinks(4, 125), [1, 2, 3, 4, 5, null, 125]);
     assert.deepEqual(pageLinks(122, 125), [1, null, 121, 122, 123, 124, 125]);
+  });
+
+  it("jumps five pages at a time", () => {
+    assert.equal(PAGE_JUMP, 5);
+    assert.equal(jumpPage(1, 125, PAGE_JUMP), 6);
+    assert.equal(jumpPage(60, 125, -PAGE_JUMP), 55);
+  });
+
+  it("stops a jump at the first or last page", () => {
+    assert.equal(jumpPage(3, 125, -PAGE_JUMP), 1);
+    assert.equal(jumpPage(123, 125, PAGE_JUMP), 125);
+    assert.equal(jumpPage(2, 3, PAGE_JUMP), 3);
+    assert.equal(jumpPage(1, 1, PAGE_JUMP), 1);
   });
 
   it("lists every page of a short list", () => {

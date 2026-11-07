@@ -603,6 +603,11 @@ th[aria-sort="descending"] .arrow::after {
   color: var(--on-accent);
 }
 
+.pager-group {
+  display: flex;
+  gap: 6px;
+}
+
 .pages {
   display: flex;
   gap: 6px;
@@ -626,10 +631,13 @@ th[aria-sort="descending"] .arrow::after {
   font-variant-numeric: tabular-nums;
 }
 
-/* Seven numbers stop fitting beside Previous and Next, so the pager says where you are instead. */
-@media (max-width: 519px) {
+/* Seven numbers stop fitting between the four buttons, so the pager says where you are instead, on a row of its
+   own. The widest pager, at page 122 of 125, is about 590px in Windows fonts, and Linux's are wider. */
+@media (max-width: 699px) {
   .pager {
+    flex-wrap: wrap;
     justify-content: space-between;
+    row-gap: 8px;
   }
 
   .pages {
@@ -638,6 +646,9 @@ th[aria-sort="descending"] .arrow::after {
 
   .page-status {
     display: block;
+    order: -1;
+    flex-basis: 100%;
+    text-align: center;
   }
 }
 
