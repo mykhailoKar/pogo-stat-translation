@@ -104,7 +104,10 @@ describe("joinGo", () => {
   it("reports a second entry that matches an already matched form", () => {
     const r = joinGo(forms, [go("deoxys", 386), go("deoxys_normal", 386)], noOverrides);
     assert.equal(r.matches.length, 1);
-    assert.deepEqual(r.conflicts.map((k) => [k.go.goId, k.msId, k.takenBy]), [["deoxys_normal", "deoxys-normal", "deoxys"]]);
+    assert.deepEqual(
+      r.conflicts.map((k) => [k.go.goId, k.msId, k.takenBy]),
+      [["deoxys_normal", "deoxys-normal", "deoxys"]],
+    );
   });
 
   it("refuses a match across different dex numbers", () => {
@@ -129,14 +132,23 @@ describe("form selection", () => {
 
   it("drops excluded patterns before the join", () => {
     const { candidates, excluded } = excludeForms(forms, overrides);
-    assert.deepEqual(excluded.map((e) => e.id), ["venusaur-gmax"]);
+    assert.deepEqual(
+      excluded.map((e) => e.id),
+      ["venusaur-gmax"],
+    );
     assert.ok(!candidates.some((f) => f.id === "venusaur-gmax"));
   });
 
   it("keeps defaults, regional forms, GO-matched forms and forms with new stats; drops duplicates", () => {
     const { candidates } = excludeForms(forms, overrides);
     const { kept, dropped } = selectForms(candidates, new Set(["castform-sunny"]), overrides);
-    assert.deepEqual(kept.map((f) => f.id).sort(), ["castform", "castform-sunny", "minior-red", "minior-red-meteor", "rattata-alola"]);
+    assert.deepEqual(kept.map((f) => f.id).sort(), [
+      "castform",
+      "castform-sunny",
+      "minior-red",
+      "minior-red-meteor",
+      "rattata-alola",
+    ]);
     assert.deepEqual(dropped.map((f) => f.id).sort(), ["minior-orange", "minior-orange-meteor"]);
   });
 });

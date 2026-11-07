@@ -4,15 +4,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import {
-  LOCK_PATH,
-  SOURCES,
-  rawFilePath,
-  readLock,
-  type Lock,
-  type LockEntry,
-  type SourceName,
-} from "./sources.ts";
+import { LOCK_PATH, SOURCES, rawFilePath, readLock, type Lock, type LockEntry, type SourceName } from "./sources.ts";
 
 const USER_AGENT = "pogo-stat-translation-pipeline";
 

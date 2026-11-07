@@ -196,7 +196,12 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
   entries.sort((a, b) => {
     const fa = order.get(a.id) as MsForm;
     const fb = order.get(b.id) as MsForm;
-    return fa.dex - fb.dex || Number(fb.isDefault) - Number(fa.isDefault) || fa.order - fb.order || fa.id.localeCompare(fb.id);
+    return (
+      fa.dex - fb.dex ||
+      Number(fb.isDefault) - Number(fa.isDefault) ||
+      fa.order - fb.order ||
+      fa.id.localeCompare(fb.id)
+    );
   });
 
   const keptIds = new Set(kept.map((f) => f.id));
@@ -205,7 +210,8 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
   const staleOverrides: string[] = [];
   for (const id of Object.keys(overrides.exceptions)) {
     if (!keptIds.has(id)) staleOverrides.push(`exceptions.${id}: not in the dataset`);
-    else if (exactOrMissing.has(id)) staleOverrides.push(`exceptions.${id}: no longer needed (formula matches, or no GO data)`);
+    else if (exactOrMissing.has(id))
+      staleOverrides.push(`exceptions.${id}: no longer needed (formula matches, or no GO data)`);
   }
   for (const id of Object.keys(overrides.fixedAdjustment)) {
     if (!keptIds.has(id)) staleOverrides.push(`fixedAdjustment.${id}: not in the dataset`);
@@ -221,7 +227,8 @@ export function buildDataset(overrides: Overrides = loadOverrides()): BuildResul
   }
   for (const { id } of overrides.finalForms) {
     if (!keptIds.has(id)) staleOverrides.push(`finalForms ${id}: not in the dataset`);
-    else if (!formsById.get(id)?.speciesEvolves) staleOverrides.push(`finalForms ${id}: its species doesn't evolve, so it isn't needed`);
+    else if (!formsById.get(id)?.speciesEvolves)
+      staleOverrides.push(`finalForms ${id}: its species doesn't evolve, so it isn't needed`);
   }
   const usedIdMap = new Set(join.matches.filter((m) => m.method === "idMap").map((m) => m.go.goId));
   for (const goId of Object.keys(overrides.idMap)) {

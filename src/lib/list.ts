@@ -53,13 +53,49 @@ export type Direction = "asc" | "desc";
 export const COLUMNS = [
   { key: "dex", label: "Dex number", short: "#", first: "asc", hint: "National Pokédex number." },
   { key: "name", label: "Name", short: "Pokémon", first: "asc", hint: "Select a row to see its stats and best shape." },
-  { key: "goFit", label: "GO Fit", short: "GO Fit", first: "desc", hint: "How close this form comes to the best spread of its own stat points." },
-  { key: "percentile", label: "Percentile", short: "Percentile", first: "desc", hint: "Share of forms with a lower GO Fit. Megas and Primals are ranked among themselves." },
-  { key: "attackFit", label: "Attack Fit", short: "Attack Fit", first: "desc", hint: "GO Attack compared with having all attack points in one stat." },
-  { key: "defenseFit", label: "Defense Fit", short: "Defense Fit", first: "desc", hint: "GO Defense compared with having all defense points in one stat." },
-  { key: "speedFit", label: "Speed Fit", short: "Speed Fit", first: "desc", hint: "How close this form's Speed is to the best use of those points." },
+  {
+    key: "goFit",
+    label: "GO Fit",
+    short: "GO Fit",
+    first: "desc",
+    hint: "How close this form comes to the best spread of its own stat points.",
+  },
+  {
+    key: "percentile",
+    label: "Percentile",
+    short: "Percentile",
+    first: "desc",
+    hint: "Share of forms with a lower GO Fit. Megas and Primals are ranked among themselves.",
+  },
+  {
+    key: "attackFit",
+    label: "Attack Fit",
+    short: "Attack Fit",
+    first: "desc",
+    hint: "GO Attack compared with having all attack points in one stat.",
+  },
+  {
+    key: "defenseFit",
+    label: "Defense Fit",
+    short: "Defense Fit",
+    first: "desc",
+    hint: "GO Defense compared with having all defense points in one stat.",
+  },
+  {
+    key: "speedFit",
+    label: "Speed Fit",
+    short: "Speed Fit",
+    first: "desc",
+    hint: "How close this form's Speed is to the best use of those points.",
+  },
   { key: "cpNow", label: "L50 CP now", short: "L50 CP now", first: "desc", hint: "CP at level 50 with perfect IVs." },
-  { key: "cpIdeal", label: "L50 CP ideal", short: "L50 CP ideal", first: "desc", hint: "CP of the best shape at level 50 with perfect IVs, after GO's own cut." },
+  {
+    key: "cpIdeal",
+    label: "L50 CP ideal",
+    short: "L50 CP ideal",
+    first: "desc",
+    hint: "CP of the best shape at level 50 with perfect IVs, after GO's own cut.",
+  },
 ] as const;
 
 export type SortKey = (typeof COLUMNS)[number]["key"];
@@ -195,7 +231,8 @@ function firstDirection(key: SortKey): Direction {
 
 /** Selecting the sorted column flips it. A new column starts in its natural direction. Either way the list starts over. */
 export function nextSort(state: ListState, key: SortKey): ListState {
-  if (state.sort === key) return { ...state, direction: state.direction === "asc" ? "desc" : "asc", page: DEFAULT_STATE.page };
+  if (state.sort === key)
+    return { ...state, direction: state.direction === "asc" ? "desc" : "asc", page: DEFAULT_STATE.page };
   return { ...state, sort: key, direction: firstDirection(key), page: DEFAULT_STATE.page };
 }
 
@@ -217,7 +254,12 @@ export function stateFromParams(params: URLSearchParams): ListState {
   return {
     category: isCategory(category) ? category : DEFAULT_STATE.category,
     sort: key,
-    direction: direction === "asc" || direction === "desc" ? direction : isSortKey(sort) ? firstDirection(key) : DEFAULT_STATE.direction,
+    direction:
+      direction === "asc" || direction === "desc"
+        ? direction
+        : isSortKey(sort)
+          ? firstDirection(key)
+          : DEFAULT_STATE.direction,
     query: params.get("q") ?? "",
     page: Number.isInteger(page) && page >= 1 ? page : DEFAULT_STATE.page,
   };

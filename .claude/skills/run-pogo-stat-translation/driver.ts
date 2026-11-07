@@ -13,7 +13,20 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { chromium, type Browser, type BrowserContext, type Page, type Response } from "playwright-core";
 import config from "../../../astro.config.ts";
-import { COLUMNS, DEFAULT_STATE, PAGE_SIZE, categoryCounts, filterRows, pageCount, pageRows, sortRows, stateFromParams, toListRow, type ListRow, type ListState } from "../../../src/lib/list.ts";
+import {
+  COLUMNS,
+  DEFAULT_STATE,
+  PAGE_SIZE,
+  categoryCounts,
+  filterRows,
+  pageCount,
+  pageRows,
+  sortRows,
+  stateFromParams,
+  toListRow,
+  type ListRow,
+  type ListState,
+} from "../../../src/lib/list.ts";
 import type { Dataset } from "../../../src/lib/types.ts";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
@@ -123,7 +136,11 @@ function build(): void {
 /** Starts node on astro directly, not through npm, so killing the child really frees the port. */
 async function serve(): Promise<string> {
   const port = await freePort();
-  const child = spawn(process.execPath, [ASTRO, "preview", "--host", HOST, "--port", String(port)], { cwd: ROOT, env: ENV, stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn(process.execPath, [ASTRO, "preview", "--host", HOST, "--port", String(port)], {
+    cwd: ROOT,
+    env: ENV,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   process.on("exit", () => child.kill());
   let log = "";
   let running = true;
@@ -133,7 +150,10 @@ async function serve(): Promise<string> {
   const base = `http://${HOST}:${port}${config.base}/`;
   const deadline = Date.now() + 30_000;
   while (running && Date.now() < deadline) {
-    const up = await fetch(base).then((response) => response.ok, () => false);
+    const up = await fetch(base).then(
+      (response) => response.ok,
+      () => false,
+    );
     if (up) return base;
     await new Promise((done) => setTimeout(done, 200));
   }
@@ -154,7 +174,9 @@ async function launchBrowser(): Promise<Browser> {
       reasons.push(`${channel}: ${message(error).split("\n")[0]}`);
     }
   }
-  throw new Error(`No browser could start. Run: npx playwright-core install --with-deps --only-shell chromium\n${reasons.join("\n")}`);
+  throw new Error(
+    `No browser could start. Run: npx playwright-core install --with-deps --only-shell chromium\n${reasons.join("\n")}`,
+  );
 }
 
 /** Opens a fresh context, because touch emulation can't change on a live one. */
@@ -184,12 +206,14 @@ async function openView(view: View, url: string): Promise<void> {
 async function goTo(view: View, url: string): Promise<Response | null> {
   const response = await view.page.goto(url, { waitUntil: "load" });
   // The list renders from script, so "load" fires before it has rows.
-  if (await view.page.locator("#list-body").count()) await view.page.waitForSelector("#list-body tr.row, #list-empty:not([hidden])");
+  if (await view.page.locator("#list-body").count())
+    await view.page.waitForSelector("#list-body tr.row, #list-empty:not([hidden])");
   return response;
 }
 
 const cardsLayout = (page: Page) => page.locator("#list-sort").isVisible();
-const overflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+const overflow = (page: Page) =>
+  page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 // Not page.url(): it updates a moment after history.replaceState, which is how the list writes its state.
 const href = (page: Page) => page.evaluate(() => location.href);
 const urlState = async (page: Page) => stateFromParams(new URL(await href(page)).searchParams);
@@ -250,7 +274,9 @@ const STEPS = {
       "#list-body tr.row",
       (trs, max) =>
         trs.slice(0, max).map((tr) => {
-          const cells = [...tr.querySelectorAll<HTMLElement>("td[data-label]")].map((td) => `${td.dataset.label} ${td.firstChild?.textContent}`);
+          const cells = [...tr.querySelectorAll<HTMLElement>("td[data-label]")].map(
+            (td) => `${td.dataset.label} ${td.firstChild?.textContent}`,
+          );
           return `#${tr.querySelector(".col-dex")?.textContent} ${tr.querySelector(".name-text")?.textContent}: ${cells.join(", ")}`;
         }),
       Number(limit),
@@ -348,10 +374,18 @@ async function checkControls(view: View, label: string): Promise<void> {
       const want = firstOf({ sort: key, direction });
       check(`sort ${key} ${direction}`, (await firstName(page)) === want, `${await firstName(page)}, wanted ${want}`);
       const state = await urlState(page);
-      check(`sort ${key} ${direction}: in the URL`, state.sort === key && state.direction === direction, await href(page));
+      check(
+        `sort ${key} ${direction}: in the URL`,
+        state.sort === key && state.direction === direction,
+        await href(page),
+      );
       if (!cards) {
         const aria = await page.locator(`th[data-key="${key}"]`).getAttribute("aria-sort");
-        check(`sort ${key} ${direction}: aria-sort`, aria === (direction === "asc" ? "ascending" : "descending"), String(aria));
+        check(
+          `sort ${key} ${direction}: aria-sort`,
+          aria === (direction === "asc" ? "ascending" : "descending"),
+          String(aria),
+        );
       }
     }
   }
@@ -359,15 +393,26 @@ async function checkControls(view: View, label: string): Promise<void> {
   const restored: Partial<ListState> = { category: "starter", sort: "name", direction: "desc", query: "char" };
   await goTo(view, `${base}?category=starter&sort=name&direction=desc&q=char`);
   check("state restored from the URL", (await firstName(page)) === firstOf(restored), String(await firstName(page)));
-  check("restored category and search", (await page.locator('input[value="starter"]').isChecked()) && (await page.inputValue("#list-search")) === "char");
+  check(
+    "restored category and search",
+    (await page.locator('input[value="starter"]').isChecked()) && (await page.inputValue("#list-search")) === "char",
+  );
   check("restored count", (await countText(page)) === forms(visible(restored).length), await countText(page));
   await goTo(view, base);
 
   for (const query of ["flabebe", "6", "farfetchd"]) {
     await STEPS.search(view, query);
     const want = onPage({ query });
-    check(`search "${query}"`, want.length > 0 && String(await allNames(page)) === String(want), String(await allNames(page)));
-    check(`search "${query}": count`, (await countText(page)) === forms(visible({ query }).length), await countText(page));
+    check(
+      `search "${query}"`,
+      want.length > 0 && String(await allNames(page)) === String(want),
+      String(await allNames(page)),
+    );
+    check(
+      `search "${query}": count`,
+      (await countText(page)) === forms(visible({ query }).length),
+      await countText(page),
+    );
     check(`search "${query}": in the URL`, (await urlState(page)).query === query, await href(page));
   }
   await STEPS.search(view, "zzzz");
@@ -381,7 +426,10 @@ async function checkControls(view: View, label: string): Promise<void> {
   const detail = page.locator("#detail-garchomp");
   const bestAttack = rows.find((row) => row.id === "garchomp")?.best.atk;
   check("row opens", await detail.isVisible());
-  check("detail shows the best shape", bestAttack !== undefined && ((await detail.textContent()) ?? "").includes(String(bestAttack)));
+  check(
+    "detail shows the best shape",
+    bestAttack !== undefined && ((await detail.textContent()) ?? "").includes(String(bestAttack)),
+  );
   check("no overflow with details open", (await overflow(page)) <= 0, `${await overflow(page)}px`);
   await detail.scrollIntoViewIfNeeded();
   await shot("detail");
@@ -397,9 +445,16 @@ async function checkControls(view: View, label: string): Promise<void> {
 
   if (view.size.touch) {
     const small = await page.evaluate(() =>
-      [...document.querySelectorAll<HTMLElement>(".pill span, #list-search, #list-sort, #list-direction, #list-pager button, .site-footer a")]
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          ".pill span, #list-search, #list-sort, #list-direction, #list-pager button, .site-footer a",
+        ),
+      ]
         .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height < 38)
-        .map((el) => `${el.tagName} ${(el.textContent ?? "").trim().slice(0, 20)} ${Math.round(el.getBoundingClientRect().height)}`),
+        .map(
+          (el) =>
+            `${el.tagName} ${(el.textContent ?? "").trim().slice(0, 20)} ${Math.round(el.getBoundingClientRect().height)}`,
+        ),
     );
     check("touch targets are large enough", small.length === 0, small.join(", "));
   }
@@ -417,9 +472,18 @@ async function checkPaging(view: View, label: string): Promise<void> {
   await STEPS.next(view);
   await showing("Next shows page 2", onPage({}, 2));
   check("page 2 is in the URL", (await pageNumber(page)) === 2, await href(page));
-  check("Next keeps keyboard focus", await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.dataset.step === "next"));
+  check(
+    "Next keeps keyboard focus",
+    await page.evaluate(
+      () => document.activeElement instanceof HTMLElement && document.activeElement.dataset.step === "next",
+    ),
+  );
   const top = await page.locator("#list-table").boundingBox();
-  check("the list's top is on screen after paging", top !== null && top.y >= -1 && top.y < view.size.height, `y=${top?.y}`);
+  check(
+    "the list's top is on screen after paging",
+    top !== null && top.y >= -1 && top.y < view.size.height,
+    `y=${top?.y}`,
+  );
   check("no overflow with the pager showing", (await overflow(page)) <= 0, `${await overflow(page)}px`);
   await page.locator("#list-pager").scrollIntoViewIfNeeded();
   await page.screenshot({ path: join(view.out, `${label}-pager.png`) });
@@ -444,7 +508,11 @@ async function checkPaging(view: View, label: string): Promise<void> {
   await goTo(view, `${base}?category=${category}&page=${last}`);
   await showing("the URL restores a page, with the remainder on the last", onPage({ category }, last));
   check("the last page can't go forward", await page.locator('#list-pager [data-step="next"]').isDisabled());
-  check("the last page is short", (await allNames(page)).length === counts[category] % PAGE_SIZE, String((await allNames(page)).length));
+  check(
+    "the last page is short",
+    (await allNames(page)).length === counts[category] % PAGE_SIZE,
+    String((await allNames(page)).length),
+  );
 
   await goTo(view, `${base}?category=${category}&page=9999`);
   check("a page past the end falls back to the last", (await pageNumber(page)) === last, await href(page));
@@ -474,7 +542,17 @@ async function checkCutLabels(view: View, label: string): Promise<void> {
   const byId = new Map(rows.map((row) => [row.id, row]));
   const title = (adjustment: number) => (adjustment < 1 ? `Includes GO's ×${adjustment} cut` : "");
 
-  for (const search of ["?sort=cpIdeal", "?sort=cpNow", "?q=necrozma", "?q=mewtwo", "?q=rayquaza", "?q=great%20tusk", "?q=garchomp", "?q=bulbasaur", ""]) {
+  for (const search of [
+    "?sort=cpIdeal",
+    "?sort=cpNow",
+    "?q=necrozma",
+    "?q=mewtwo",
+    "?q=rayquaza",
+    "?q=great%20tusk",
+    "?q=garchomp",
+    "?q=bulbasaur",
+    "",
+  ]) {
     await goTo(view, `${base}${search}`);
     const shown = await page.$$eval("#list-body tr.row", (trs) =>
       trs.map((tr) => ({
@@ -487,9 +565,15 @@ async function checkCutLabels(view: View, label: string): Promise<void> {
       const row = byId.get(id);
       return !row || now !== title(row.adjustment) || ideal !== title(row.idealAdjustment);
     });
-    check(`Cut labels match the data on "${search}"`, shown.length > 0 && wrong.length === 0, wrong.map((row) => row.id).join(", "));
+    check(
+      `Cut labels match the data on "${search}"`,
+      shown.length > 0 && wrong.length === 0,
+      wrong.map((row) => row.id).join(", "),
+    );
     if (!(await cardsLayout(page))) {
-      const clipped = await page.$$eval("#list-body tr.row > td", (cells) => cells.filter((cell) => cell.scrollWidth > cell.clientWidth).map((cell) => cell.textContent));
+      const clipped = await page.$$eval("#list-body tr.row > td", (cells) =>
+        cells.filter((cell) => cell.scrollWidth > cell.clientWidth).map((cell) => cell.textContent),
+      );
       check(`labels fit their cells on "${search}"`, clipped.length === 0, clipped.join(" | "));
     }
   }
@@ -527,7 +611,11 @@ async function checkView(view: View, label: string): Promise<void> {
   check("About page opens", (await page.locator("h1").textContent()) === "About this site");
   check("no page overflow on About", (await overflow(page)) <= 0, `${await overflow(page)}px`);
   if (width >= 760) {
-    const wide = await page.evaluate(() => [...document.querySelectorAll(".prose pre, .table-wrap")].filter((el) => el.scrollWidth > el.clientWidth + 1).length);
+    const wide = await page.evaluate(
+      () =>
+        [...document.querySelectorAll(".prose pre, .table-wrap")].filter((el) => el.scrollWidth > el.clientWidth + 1)
+          .length,
+    );
     check("formula blocks fit", wide === 0, `${wide} too wide`);
   }
   await page.screenshot({ path: join(view.out, `${label}-about.png`) });
@@ -549,7 +637,9 @@ async function reportSpeed(view: View): Promise<void> {
       times.push(
         await view.page.evaluate(() => {
           const cards = document.querySelector<HTMLElement>("#list-sort")?.offsetParent !== null;
-          const control = document.querySelector<HTMLElement>(cards ? "#list-direction" : 'th[data-key="goFit"] button');
+          const control = document.querySelector<HTMLElement>(
+            cards ? "#list-direction" : 'th[data-key="goFit"] button',
+          );
           const start = performance.now();
           control?.click();
           void document.body.offsetHeight;
@@ -577,7 +667,11 @@ async function runChecks(view: View): Promise<void> {
   await openView(view, view.base);
   const response = await goTo(view, `${view.base}does-not-exist/`);
   check("missing page returns 404", response?.status() === 404, String(response?.status()));
-  check("404 page keeps the site header", (await view.page.locator(".logo").count()) === 1 && (await view.page.locator("h1").textContent()) === "Page not found");
+  check(
+    "404 page keeps the site header",
+    (await view.page.locator(".logo").count()) === 1 &&
+      (await view.page.locator("h1").textContent()) === "Page not found",
+  );
 
   if (!flags.quick) await reportSpeed(view);
   console.log(`screenshots: ${view.out}`);

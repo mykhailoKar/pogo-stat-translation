@@ -53,7 +53,8 @@ export function renderValidation(r: BuildResult): string {
     adjCounts.set(key, (adjCounts.get(key) ?? 0) + 1);
   }
   out.push("Adjustments applied across the whole dataset:", "", "| Adjustment | Entries |", "|---|---:|");
-  for (const [k, n] of [...adjCounts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) out.push(`| ${k} | ${n} |`);
+  for (const [k, n] of [...adjCounts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])))
+    out.push(`| ${k} | ${n} |`);
   out.push("", `Entries converted from an older stat era (\`msGoBasis\`): ${eraCount}.`, "");
 
   out.push("## Unexplained mismatches", "");
@@ -80,7 +81,9 @@ export function renderValidation(r: BuildResult): string {
   } else {
     out.push("| Id | GO actual | Predicted | Reason | Source |", "|---|---|---|---|---|");
     for (const row of v.exceptions) {
-      out.push(`| ${row.id} | ${line(row.actual)} | ${line(row.predicted)} | ${escape(row.reason ?? "")} | ${escape(row.source ?? "")} |`);
+      out.push(
+        `| ${row.id} | ${line(row.actual)} | ${line(row.predicted)} | ${escape(row.reason ?? "")} | ${escape(row.source ?? "")} |`,
+      );
     }
     out.push("");
   }
@@ -141,9 +144,15 @@ export function renderCoverage(r: BuildResult): string {
   out.push("");
 
   out.push("## Excluded and dropped forms", "", "| PokéAPI id | Reason |", "|---|---|");
-  for (const e of [...c.excluded, ...c.dropped].sort((a, b) => a.id.localeCompare(b.id))) out.push(`| ${e.id} | ${escape(e.reason)} |`);
+  for (const e of [...c.excluded, ...c.dropped].sort((a, b) => a.id.localeCompare(b.id)))
+    out.push(`| ${e.id} | ${escape(e.reason)} |`);
   out.push("");
 
-  out.push("## Forms with no GO data (stats predicted)", "", c.predictedIds.map((id) => `\`${id}\``).join(", ") || "None.", "");
+  out.push(
+    "## Forms with no GO data (stats predicted)",
+    "",
+    c.predictedIds.map((id) => `\`${id}\``).join(", ") || "None.",
+    "",
+  );
   return out.join("\n");
 }

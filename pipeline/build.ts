@@ -51,7 +51,9 @@ function main(): void {
 
   write(DATASET_PATH, serializeDataset(dataset));
   if (validation.unexplained.length > 0) {
-    console.warn(`Warning: ${validation.unexplained.length} unexplained mismatches; npm test will fail. See data/reports/validation.md.`);
+    console.warn(
+      `Warning: ${validation.unexplained.length} unexplained mismatches; npm test will fail. See data/reports/validation.md.`,
+    );
   }
 }
 

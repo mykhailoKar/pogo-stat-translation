@@ -24,13 +24,21 @@ before(() => {
 
 describe("validation", () => {
   it("has no unexplained formula mismatches", () => {
-    const rows = result.validation.unexplained.map((r) => `${r.id}: GO ${r.actual.atk}/${r.actual.def}/${r.actual.sta}`);
+    const rows = result.validation.unexplained.map(
+      (r) => `${r.id}: GO ${r.actual.atk}/${r.actual.def}/${r.actual.sta}`,
+    );
     assert.deepEqual(rows, [], "see data/reports/validation.md");
   });
 
   it("matches or deliberately ignores every PvPoke entry", () => {
-    assert.deepEqual(result.coverage.join.unmatched.map((g) => g.goId), []);
-    assert.deepEqual(result.coverage.join.conflicts.map((k) => k.go.goId), []);
+    assert.deepEqual(
+      result.coverage.join.unmatched.map((g) => g.goId),
+      [],
+    );
+    assert.deepEqual(
+      result.coverage.join.conflicts.map((k) => k.go.goId),
+      [],
+    );
   });
 
   it("has no stale overrides", () => {
@@ -55,7 +63,10 @@ describe("dataset shape", () => {
     const ids = result.dataset.pokemon.map((p) => p.id);
     assert.equal(new Set(ids).size, ids.length);
     const dexes = result.dataset.pokemon.map((p) => p.dex);
-    assert.deepEqual(dexes, [...dexes].sort((a, b) => a - b));
+    assert.deepEqual(
+      dexes,
+      [...dexes].sort((a, b) => a - b),
+    );
   });
 
   it("covers every species from #1 to the latest", () => {
@@ -67,11 +78,18 @@ describe("dataset shape", () => {
 
   it("has sane stats, metrics and ranks on every entry", () => {
     for (const p of result.dataset.pokemon) {
-      for (const k of ["atk", "def", "sta"] as const) assert.ok(Number.isInteger(p.go[k]) && p.go[k] > 0, `${p.id} ${k}`);
+      for (const k of ["atk", "def", "sta"] as const)
+        assert.ok(Number.isInteger(p.go[k]) && p.go[k] > 0, `${p.id} ${k}`);
       assert.ok(p.metrics.cp.l40 <= p.metrics.cp.l50 && p.metrics.cp.l50 <= p.metrics.cp.l51, p.id);
-      for (const k of ["bstPct", "cpL50Pct", "spL50Pct", "goFitPct"] as const) assert.ok(p.ranks[k] >= 0 && p.ranks[k] <= 100, `${p.id} ${k}`);
+      for (const k of ["bstPct", "cpL50Pct", "spL50Pct", "goFitPct"] as const)
+        assert.ok(p.ranks[k] >= 0 && p.ranks[k] <= 100, `${p.id} ${k}`);
       assert.equal(p.go.status === "actual", p.go.goId !== null, p.id);
-      assert.equal(p.exception !== null, p.go.status === "actual" && (p.go.atk !== p.goPredicted.atk || p.go.def !== p.goPredicted.def || p.go.sta !== p.goPredicted.sta), p.id);
+      assert.equal(
+        p.exception !== null,
+        p.go.status === "actual" &&
+          (p.go.atk !== p.goPredicted.atk || p.go.def !== p.goPredicted.def || p.go.sta !== p.goPredicted.sta),
+        p.id,
+      );
     }
   });
 
@@ -93,8 +111,12 @@ describe("GO Fit on real data", () => {
   it("is a sane reshape on every entry", () => {
     for (const p of result.dataset.pokemon) {
       const { score, attackFit, defenseFit, speedFit, best } = p.goFit;
-      for (const value of [score, attackFit, defenseFit, speedFit]) assert.ok(value > 0 && value <= 100, `${p.id} ${value}`);
-      assert.ok(Math.abs((attackFit * defenseFit * speedFit) / 10_000 - score) < 0.2, `${p.id} parts don't multiply into the score`);
+      for (const value of [score, attackFit, defenseFit, speedFit])
+        assert.ok(value > 0 && value <= 100, `${p.id} ${value}`);
+      assert.ok(
+        Math.abs((attackFit * defenseFit * speedFit) / 10_000 - score) < 0.2,
+        `${p.id} parts don't multiply into the score`,
+      );
       for (const value of Object.values(best.ms)) assert.ok(value >= 1 && value <= 255, `${p.id} ${value}`);
       assert.equal(best.ms.hp, p.msGoBasis?.hp ?? p.ms.hp, p.id);
     }
@@ -147,7 +169,8 @@ describe("the Cut label", () => {
   const cuts = (id: string): [number, number] => [rowOf(id).adjustment, rowOf(id).idealAdjustment];
 
   it("marks forms GO cuts, in both columns", () => {
-    for (const id of ["slaking", "mewtwo", "necrozma-ultra", "necrozma-dusk", "walking-wake"]) assert.deepEqual(cuts(id), [0.91, 0.91], id);
+    for (const id of ["slaking", "mewtwo", "necrozma-ultra", "necrozma-dusk", "walking-wake"])
+      assert.deepEqual(cuts(id), [0.91, 0.91], id);
     for (const id of ["rayquaza-mega", "kyogre-primal", "mewtwo-mega-x"]) assert.deepEqual(cuts(id), [0.97, 0.97], id);
   });
 
@@ -156,7 +179,8 @@ describe("the Cut label", () => {
   });
 
   it("leaves uncut forms alone, including those GO's data exempts from the line", () => {
-    for (const id of ["bulbasaur", "charizard-mega-x", "great-tusk", "iron-hands", "roaring-moon", "palafin-hero"]) assert.deepEqual(cuts(id), [1, 1], id);
+    for (const id of ["bulbasaur", "charizard-mega-x", "great-tusk", "iron-hands", "roaring-moon", "palafin-hero"])
+      assert.deepEqual(cuts(id), [1, 1], id);
   });
 
   it("matches GO's real stats for every form with GO data", () => {
@@ -195,9 +219,11 @@ describe("category tags", () => {
   });
 
   it("gives Megas and Primals their species' categories", () => {
-    for (const id of ["rayquaza-mega", "kyogre-primal", "heatran-mega"]) assert.ok(byId.get(id)?.tags.includes("legendary"), id);
+    for (const id of ["rayquaza-mega", "kyogre-primal", "heatran-mega"])
+      assert.ok(byId.get(id)?.tags.includes("legendary"), id);
     for (const id of ["diancie-mega", "darkrai-mega"]) assert.ok(byId.get(id)?.tags.includes("mythical"), id);
-    for (const id of ["charizard-mega-x", "greninja-mega", "meganium-mega"]) assert.ok(byId.get(id)?.tags.includes("starter"), id);
+    for (const id of ["charizard-mega-x", "greninja-mega", "meganium-mega"])
+      assert.ok(byId.get(id)?.tags.includes("starter"), id);
   });
 
   it("covers all 27 starter lines and their regional forms", () => {
@@ -209,15 +235,24 @@ describe("category tags", () => {
   });
 
   it("treats a species with no evolution as fully evolved", () => {
-    for (const id of ["charizard", "tauros", "mewtwo", "slowbro-galar"]) assert.ok(byId.get(id)?.tags.includes("fully-evolved"), id);
-    for (const id of ["charmander", "pichu", "stantler"]) assert.equal(byId.get(id)?.tags.includes("fully-evolved"), false, id);
+    for (const id of ["charizard", "tauros", "mewtwo", "slowbro-galar"])
+      assert.ok(byId.get(id)?.tags.includes("fully-evolved"), id);
+    for (const id of ["charmander", "pichu", "stantler"])
+      assert.equal(byId.get(id)?.tags.includes("fully-evolved"), false, id);
   });
 
   it("handles forms that evolve differently from their species", () => {
     for (const id of ["corsola", "linoone", "farfetchd", "mr-mime", "qwilfish", "floette-eternal"]) {
       assert.ok(byId.get(id)?.tags.includes("fully-evolved"), id);
     }
-    for (const id of ["corsola-galar", "linoone-galar", "farfetchd-galar", "mr-mime-galar", "qwilfish-hisui", "floette"]) {
+    for (const id of [
+      "corsola-galar",
+      "linoone-galar",
+      "farfetchd-galar",
+      "mr-mime-galar",
+      "qwilfish-hisui",
+      "floette",
+    ]) {
       assert.equal(byId.get(id)?.tags.includes("fully-evolved"), false, id);
     }
   });

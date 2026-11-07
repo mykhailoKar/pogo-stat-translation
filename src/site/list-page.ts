@@ -63,9 +63,14 @@ function goRow(label: string, go: GoStats): string {
 
 function detailNotes(row: ListRow): string {
   const notes: string[] = [];
-  if (row.adjustment < 1) notes.push(`GO multiplies this form's stats by ${row.adjustment}, and its best shape keeps that cut.`);
-  else if (row.idealAdjustment < 1) notes.push(`The best shape would cross GO's 4,000 CP line, so its GO stats and CP ideal include the ×${row.idealAdjustment} cut. GO Fit leaves that cut out.`);
-  if (row.msGen !== null) notes.push(`GO still uses this form's Gen ${row.msGen} stats, so they differ from the current games.`);
+  if (row.adjustment < 1)
+    notes.push(`GO multiplies this form's stats by ${row.adjustment}, and its best shape keeps that cut.`);
+  else if (row.idealAdjustment < 1)
+    notes.push(
+      `The best shape would cross GO's 4,000 CP line, so its GO stats and CP ideal include the ×${row.idealAdjustment} cut. GO Fit leaves that cut out.`,
+    );
+  if (row.msGen !== null)
+    notes.push(`GO still uses this form's Gen ${row.msGen} stats, so they differ from the current games.`);
   if (row.predicted) notes.push("This form isn't in GO data yet, so its GO stats are the formula's prediction.");
   if (row.note) notes.push(escapeHtml(row.note));
   return notes.map((note) => `<li>${note}</li>`).join("");
@@ -99,7 +104,9 @@ function cutBadge(adjustment: number): string {
 function rowHtml(row: ListRow): string {
   const isOpen = open.has(row.id);
   const types = row.types.map(capitalize).join(" / ");
-  const predicted = row.predicted ? `<span class="badge" title="Not in GO data yet; GO stats are predicted">Predicted</span>` : "";
+  const predicted = row.predicted
+    ? `<span class="badge" title="Not in GO data yet; GO stats are predicted">Predicted</span>`
+    : "";
   const line = `<tr class="row" data-id="${row.id}">
     <td class="col-dex">${row.dex}</td>
     <th scope="row" class="col-name"><button type="button" class="name" aria-expanded="${isOpen}"><span class="chevron" aria-hidden="true"></span><span class="name-text">${escapeHtml(row.name)}</span></button><span class="types">${types}</span>${predicted}</th>
@@ -123,7 +130,10 @@ function renderHead(): void {
   sortSelect.value = state.sort;
   const ascending = state.direction === "asc";
   directionButton.textContent = ascending ? "Ascending" : "Descending";
-  directionButton.setAttribute("aria-label", `Sort direction: ${ascending ? "ascending" : "descending"}. Select to reverse.`);
+  directionButton.setAttribute(
+    "aria-label",
+    `Sort direction: ${ascending ? "ascending" : "descending"}. Select to reverse.`,
+  );
 }
 
 function pageLinkHtml(link: number | null, page: number): string {
@@ -135,7 +145,9 @@ function pageLinkHtml(link: number | null, page: number): string {
 function renderPager(page: number, pages: number): void {
   pager.hidden = pages === 1;
   pager.innerHTML = `<button type="button" data-page="${page - 1}" data-step="prev"${page === 1 ? " disabled" : ""}>Previous</button>
-    <ol class="pages">${pageLinks(page, pages).map((link) => pageLinkHtml(link, page)).join("")}</ol>
+    <ol class="pages">${pageLinks(page, pages)
+      .map((link) => pageLinkHtml(link, page))
+      .join("")}</ol>
     <p class="page-status">Page ${page} of ${pages}</p>
     <button type="button" data-page="${page + 1}" data-step="next"${page === pages ? " disabled" : ""}>Next</button>`;
 }
@@ -192,7 +204,9 @@ pager.addEventListener("click", (event) => {
   history.pushState(null, "", urlOf({ ...state, page }));
   update({ page });
   // The buttons were just redrawn, so put focus back. Next is disabled on the last page, and vice versa.
-  const same = step ? pager.querySelector<HTMLButtonElement>(`[data-step="${step}"]:not(:disabled)`) : pager.querySelector<HTMLButtonElement>('[aria-current="page"]');
+  const same = step
+    ? pager.querySelector<HTMLButtonElement>(`[data-step="${step}"]:not(:disabled)`)
+    : pager.querySelector<HTMLButtonElement>('[aria-current="page"]');
   (same ?? pager.querySelector<HTMLButtonElement>("button:not(:disabled)"))?.focus({ preventScroll: true });
   if (table.getBoundingClientRect().top < 0) table.scrollIntoView();
 });

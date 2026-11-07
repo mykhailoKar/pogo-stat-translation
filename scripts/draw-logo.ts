@@ -86,7 +86,16 @@ function shapes(p: Layout): { main: string; boost: string } {
   const boost: string[] = [];
 
   // HP: alone, widening into the top band.
-  main.push(ribbon({ x0: 3, ...span(left.hp), x1: xSpeed, a1: right.stamina - W / 2, b1: right.stamina + W / 2, roundLeft: true }));
+  main.push(
+    ribbon({
+      x0: 3,
+      ...span(left.hp),
+      x1: xSpeed,
+      a1: right.stamina - W / 2,
+      b1: right.stamina + W / 2,
+      roundLeft: true,
+    }),
+  );
 
   // Attack: Atk and SpA meet in the upper part of the band, leaving its lower edge for Speed.
   const aTop = right.attack - W / 2;
@@ -112,8 +121,12 @@ function shapes(p: Layout): { main: string; boost: string } {
   // Speed: one strand that splits in two and feeds both bands from the inside.
   const s = left.spe;
   boost.push(`M3 ${r(s - half)}H${r(xSplit)}V${r(s + half)}H3A${r(half)} ${r(half)} 0 0 1 3 ${r(s - half)}Z`);
-  boost.push(ribbon({ x0: xSplit - 0.5, a0: s - half, b0: s + 0.3, x1: xSpeed + 1, a1: aLow - 1.5, b1: right.attack + W / 2 }));
-  boost.push(ribbon({ x0: xSplit - 0.5, a0: s - 0.3, b0: s + half, x1: xSpeed + 1, a1: right.defense - W / 2, b1: dHigh + 1.5 }));
+  boost.push(
+    ribbon({ x0: xSplit - 0.5, a0: s - half, b0: s + 0.3, x1: xSpeed + 1, a1: aLow - 1.5, b1: right.attack + W / 2 }),
+  );
+  boost.push(
+    ribbon({ x0: xSplit - 0.5, a0: s - 0.3, b0: s + half, x1: xSpeed + 1, a1: right.defense - W / 2, b1: dHigh + 1.5 }),
+  );
   // Speed runs on under each band, so the shapes overlap rather than just touch, and it stops before the round end.
   const under = xEnd - W / 2 - 0.1;
   boost.push(rect(xSpeed, aLow - 1.5, under, right.attack + W / 2));
