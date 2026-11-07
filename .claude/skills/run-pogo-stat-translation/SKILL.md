@@ -116,6 +116,8 @@ Before committing, run what CI runs. It builds the dataset, tests, lints, type-c
 npm run verify
 ```
 
+`npm run format` fixes what the formatting check reports. CI also runs the driver's full `check` on every pull request, in the **Browser checks** job, and keeps the screenshots as an artifact named `screenshots`.
+
 `tsc` doesn't read `.astro` files, so a wrong call in a page passes all of this. Only the driver or your eyes will catch it.
 
 ## Gotchas

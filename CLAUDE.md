@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-pogo-stat-translation scores how well each main-series Pokémon's base stats carry over into Pokémon GO. A Node pipeline builds one JSON dataset from pinned upstream data, and an Astro static site lists it. The site is live at https://mykhailokar.github.io/pogo-stat-translation/, and **every push to `main` deploys it**.
+pogo-stat-translation scores how well each main-series Pokémon's base stats carry over into Pokémon GO. A Node pipeline builds one JSON dataset from pinned upstream data, and an Astro static site lists it. The site is live at https://mykhailokar.github.io/pogo-stat-translation/, and **every merge into `main` deploys it**.
 
 ## Where things are written down
 
@@ -17,7 +17,8 @@ The project owner chooses what comes next. Candidates are listed in the README, 
 
 ## Commands
 
-- `npm run verify` runs the whole chain: build the dataset, test, lint, type-check, build the site. Run it before every commit. A fresh clone needs `npm ci && npm run fetch` first.
+- `npm run verify` runs the whole chain: build the dataset, test, lint, check formatting, type-check, build the site. Run it before every commit. A fresh clone needs `npm ci && npm run fetch` first.
+- `npm run format` formats the code with Prettier. CI rejects unformatted code.
 - `node .claude/skills/run-pogo-stat-translation/driver.ts check --quick` checks the built site in a real browser. Run it after any change under `src/`, because `npm test` can't see the page's wiring.
 
 ## Rules
@@ -34,4 +35,5 @@ The project owner chooses what comes next. Candidates are listed in the README, 
 - CI fails if the committed dataset differs from a fresh build, so commit the dataset and reports with the change that caused them.
 - Everything is TypeScript, including tooling. Node runs `.ts` directly (type stripping), so imports use `.ts` extensions and only erasable syntax is allowed (no enums, namespaces or parameter properties).
 - Credit Pokémon GO's developer as Scopely Explore, not Niantic. No sprites or other Nintendo art.
+- `main` is protected, so never push to it. Work on a branch, push the branch and open a pull request with `gh pr create`, using the template's checklist. It can merge only when both CI jobs pass, **Test and build** and **Browser checks**. Merge with a merge commit, not squash or rebase ([decision 0007](docs/decisions/0007-team-workflow.md)).
 - Commits: one change per commit, a short imperative subject, and a body that says why.

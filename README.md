@@ -27,7 +27,7 @@ npm run dev          # local site at http://localhost:4321/pogo-stat-translation
 npm run build        # static site in dist/
 ```
 
-Before committing, run `npm run verify`. It builds the dataset, tests, lints, type-checks and builds the site, the same checks CI runs. After a change to the site, also check it in a real browser:
+Before committing, run `npm run verify`. It builds the dataset, tests, lints, checks formatting, type-checks and builds the site. `npm run format` fixes formatting. After a change to the site, also check it in a real browser:
 
 ```sh
 node .claude/skills/run-pogo-stat-translation/driver.ts check --quick
@@ -35,7 +35,7 @@ node .claude/skills/run-pogo-stat-translation/driver.ts check --quick
 
 The driver builds and serves the site itself, and tests 3 screen sizes in light and dark. Its [SKILL.md](.claude/skills/run-pogo-stat-translation/SKILL.md) lists every option.
 
-Pushing to `main` deploys the site to GitHub Pages through `.github/workflows/deploy.yml`.
+Merging into `main` deploys the site to GitHub Pages through `.github/workflows/deploy.yml`.
 
 ## Layout
 
@@ -54,6 +54,7 @@ Pushing to `main` deploys the site to GitHub Pages through `.github/workflows/de
 | `scripts/draw-logo.ts` | Generates the logo and favicon |
 | `.claude/skills/run-pogo-stat-translation/` | The browser driver and its instructions, for people and AI agents |
 | `CLAUDE.md` | Rules for AI coding agents working in this repo |
+| `.github/` | CI, deploy and Dependabot config, and the pull request template |
 
 Everything is TypeScript, including the config and tooling. Node 24 runs `.ts` files directly, so there's no compile step outside the site build.
 
@@ -68,6 +69,15 @@ Nothing is scheduled. The candidates so far, in no order:
 - **A scheduled data refresh** in GitHub Actions.
 
 Sprites are left out on purpose ([decision 0006](docs/decisions/0006-astro-site-inline-list-data.md)).
+
+## Contributing
+
+`main` is protected, so every change goes through a pull request. It can merge only when both CI jobs pass:
+
+- **Test and build:** lint, formatting, types, the rebuilt dataset, tests and the site build.
+- **Browser checks:** the driver at all 9 sizes, in light and dark. The screenshots are kept as an artifact.
+
+The pull request template has the checklist. Dependabot opens dependency updates as pull requests every week. [Decision 0007](docs/decisions/0007-team-workflow.md) explains the setup.
 
 ## Data and credits
 
