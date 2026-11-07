@@ -15,6 +15,7 @@
 - [0004: Pinned sources, committed dataset](decisions/0004-pinned-sources-committed-dataset.md)
 - [0005: GO Fit as the headline score](decisions/0005-go-fit-headline-score.md)
 - [0006: Astro site with the list data inlined](decisions/0006-astro-site-inline-list-data.md)
+- [0007: Pull requests, a formatter, browser checks in CI and Dependabot](decisions/0007-team-workflow.md)
 
 ## Generated reports
 

@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["pipeline", "src", "tests"]
+  "include": ["pipeline", "src", "tests", "scripts", "astro.config.ts", ".claude/skills/**/*.ts"]
 }

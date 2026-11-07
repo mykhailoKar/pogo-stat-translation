@@ -10,7 +10,7 @@ Source research for the project, kept as written. The files are unchanged copies
   - the ideal main-series spread for each format (raids, gyms, Max Battles, Great/Ultra/Master League),
   - example Pokémon for each.
 
-  This is the basis for `docs/methodology.md` and for Phase 2's format lenses.
+  This is the basis for `docs/methodology.md` and for the planned format lenses (methodology §10).
 - **[custom-build-stat-product-study.md](custom-build-stat-product-study.md).** Hypothetical spreads at BST 680, 754 and 778 that maximise GO stat product. It covers attack-weighted builds, wall builds and the ×0.91 cut, compares them with Mega Zygarde, and ends with a playbook. Its golden values (GO lines, CP, stat product, bulk) are the unit tests in `tests/formula.test.ts` and `tests/metrics.test.ts`.
 
 ## Known errata

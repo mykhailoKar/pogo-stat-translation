@@ -9,7 +9,10 @@ export interface Exclusion {
 }
 
 /** Step 1, before the join: drop forms ruled out by `excludeForms` (Gmax, Totem, cosmetic). */
-export function excludeForms(forms: readonly MsForm[], overrides: Overrides): { candidates: MsForm[]; excluded: Exclusion[] } {
+export function excludeForms(
+  forms: readonly MsForm[],
+  overrides: Overrides,
+): { candidates: MsForm[]; excluded: Exclusion[] } {
   const rules = compileRules(overrides.excludeForms);
   const forced = new Set(overrides.includeForms.map((f) => f.id));
   const candidates: MsForm[] = [];
@@ -36,7 +39,9 @@ export function selectForms(
   overrides: Overrides,
 ): { kept: MsForm[]; dropped: Exclusion[] } {
   const forced = new Set(overrides.includeForms.map((f) => f.id));
-  const sorted = [...candidates].sort((a, b) => a.dex - b.dex || Number(b.isDefault) - Number(a.isDefault) || a.order - b.order);
+  const sorted = [...candidates].sort(
+    (a, b) => a.dex - b.dex || Number(b.isDefault) - Number(a.isDefault) || a.order - b.order,
+  );
   const seenStats = new Map<number, Set<string>>();
   const kept: MsForm[] = [];
   const dropped: Exclusion[] = [];

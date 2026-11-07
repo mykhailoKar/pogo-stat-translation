@@ -754,6 +754,14 @@ th[aria-sort="descending"] .arrow::after {
   .list .col-dex {
     width: 2.7rem;
   }
+
+  /* 12.5% is too narrow here for a five-digit CP and its Cut label in wider fonts, such as Linux's DejaVu Sans.
+     6ch is the digits and comma, 2.4rem the label and its margin, 10px the cell's padding. No percentage: in a
+     fixed table, a calc() that mixes one in counts as auto. */
+  .list .col-cpNow,
+  .list .col-cpIdeal {
+    width: calc(6ch + 2.4rem + 10px);
+  }
 }
 
 /* With room to spare, a form's types share its name's line, so ten rows and the pager fit a laptop screen. */

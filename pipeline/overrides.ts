@@ -22,9 +22,7 @@ const OverridesSchema = z.object({
   fixedAdjustment: z
     .record(z.string(), z.object({ percent: z.number().int().positive(), reason: reason.optional(), source }))
     .default({}),
-  basisGeneration: z
-    .record(z.string(), z.object({ generation: z.number().int().min(1), reason, source }))
-    .default({}),
+  basisGeneration: z.record(z.string(), z.object({ generation: z.number().int().min(1), reason, source })).default({}),
   exceptions: z
     .record(
       z.string(),

@@ -15,60 +15,85 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
 <Base>
   <section class="intro">
     <h1>How well do a Pokémon's stats translate into GO?</h1>
-    <p>Pokémon GO turns six main-series stats into three, and some stat spreads lose more in the change than others. GO Fit scores how close each Pokémon comes to the best spread of its own stat points. The closer to 100%, the better its stats carry over.</p>
+    <p>
+      Pokémon GO turns six main-series stats into three, and some stat spreads lose more in the change than others. GO
+      Fit scores how close each Pokémon comes to the best spread of its own stat points. The closer to 100%, the better
+      its stats carry over.
+    </p>
   </section>
 
   <fieldset class="categories" id="list-categories">
     <legend class="sr-only">Category</legend>
     <div class="pills">
-      {
-        CATEGORIES.map((category) => (
-          <label class="pill">
-            <input type="radio" name="category" value={category.id} checked={category.id === DEFAULT_STATE.category} />
-            <span>
-              {category.label} <small>{number.format(counts[category.id])}</small>
-            </span>
-          </label>
-        ))
-      }
+      {CATEGORIES.map((category) => (
+        <label class="pill">
+          <input type="radio" name="category" value={category.id} checked={category.id === DEFAULT_STATE.category} />
+          <span>
+            {category.label} <small>{number.format(counts[category.id])}</small>
+          </span>
+        </label>
+      ))}
     </div>
   </fieldset>
 
   <div class="toolbar">
     <div class="search">
-      <label class="sr-only" for="list-search">Search by name or dex number</label>
-      <input id="list-search" type="search" placeholder="Search by name or dex number" autocomplete="off" spellcheck="false" />
+      <label class="sr-only" for="list-search">
+        Search by name or dex number
+      </label>
+      <input
+        id="list-search"
+        type="search"
+        placeholder="Search by name or dex number"
+        autocomplete="off"
+        spellcheck="false"
+      />
     </div>
     <div class="sort">
       <label>
         <span class="sr-only">Sort by</span>
         <select id="list-sort">
-          {COLUMNS.map((column) => <option value={column.key}>{`Sort by ${column.label}`}</option>)}
+          {COLUMNS.map((column) => (
+            <option value={column.key}>{`Sort by ${column.label}`}</option>
+          ))}
         </select>
       </label>
-      <button type="button" id="list-direction">Descending</button>
+      <button type="button" id="list-direction">
+        Descending
+      </button>
     </div>
-    <p class="count" id="list-count" role="status">{number.format(rows.length)} forms</p>
-    <p class="hint">CP is at level 50 with perfect IVs. <a href={`${home}about/`}>How it's calculated</a></p>
+    <p class="count" id="list-count" role="status">
+      {number.format(rows.length)} forms
+    </p>
+    <p class="hint">
+      CP is at level 50 with perfect IVs. <a href={`${home}about/`}>How it's calculated</a>
+    </p>
   </div>
 
-  <noscript><p>This list needs JavaScript. The <a href={`${home}about/`}>About page</a> works without it, and the data is available as <a href={`${home}data/pokemon.json`}>JSON</a>.</p></noscript>
+  <noscript>
+    <p>
+      This list needs JavaScript. The <a href={`${home}about/`}>About page</a> works without it, and the data is
+      available as <a href={`${home}data/pokemon.json`}>JSON</a>.
+    </p>
+  </noscript>
 
   <table class="list" id="list-table">
-    <caption class="sr-only">GO Fit for each Pokémon form. Select a column heading to sort, or a row to see its stats.</caption>
+    <caption class="sr-only">
+      GO Fit for each Pokémon form. Select a column heading to sort, or a row to see its stats.
+    </caption>
     <thead id="list-head">
       <tr>
-        {
-          COLUMNS.map((column) => (
-            <th scope="col" data-key={column.key} class={`col-${column.key}`} title={column.hint}>
-              <button type="button">
-                <span class:list={[{ "sr-only": column.key === "dex" }]}>{column.key === "dex" ? column.label : column.short}</span>
-                {column.key === "dex" && <span aria-hidden="true">#</span>}
-                <span class="arrow" aria-hidden="true" />
-              </button>
-            </th>
-          ))
-        }
+        {COLUMNS.map((column) => (
+          <th scope="col" data-key={column.key} class={`col-${column.key}`} title={column.hint}>
+            <button type="button">
+              <span class:list={[{ "sr-only": column.key === "dex" }]}>
+                {column.key === "dex" ? column.label : column.short}
+              </span>
+              {column.key === "dex" && <span aria-hidden="true">#</span>}
+              <span class="arrow" aria-hidden="true" />
+            </button>
+          </th>
+        ))}
       </tr>
     </thead>
     <tbody id="list-body" data-base={home}></tbody>
@@ -78,7 +103,9 @@ const json = JSON.stringify(rows).replace(/</g, "\\u003c");
 
   <div class="empty" id="list-empty" hidden>
     <p>No forms match that search.</p>
-    <button type="button" class="button" id="list-clear">Show all forms</button>
+    <button type="button" class="button" id="list-clear">
+      Show all forms
+    </button>
   </div>
 
   <script is:inline type="application/json" id="list-data" set:html={json} />

@@ -1,7 +1,7 @@
 // Builds the site, serves it on a private port and drives it in a real browser. SKILL.md has the usage.
 //
-//   node .claude/skills/run-pogo-stat-translation/driver.mjs check [--quick]
-//   node .claude/skills/run-pogo-stat-translation/driver.mjs drive [--size phone] [--theme dark] "step" "step" ...
+//   node .claude/skills/run-pogo-stat-translation/driver.ts check [--quick]
+//   node .claude/skills/run-pogo-stat-translation/driver.ts drive [--size phone] [--theme dark] "step" "step" ...
 //
 // Expected values come from src/lib/list.ts and the built dataset, so a data refresh doesn't break the checks.
 import { spawn, spawnSync } from "node:child_process";
@@ -11,13 +11,34 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { chromium } from "playwright-core";
-import config from "../../../astro.config.mjs";
-import { COLUMNS, DEFAULT_STATE, PAGE_SIZE, categoryCounts, filterRows, pageCount, pageRows, sortRows, stateFromParams, toListRow } from "../../../src/lib/list.ts";
+import { chromium, type Browser, type BrowserContext, type Page, type Response } from "playwright-core";
+import config from "../../../astro.config.ts";
+import {
+  COLUMNS,
+  DEFAULT_STATE,
+  PAGE_SIZE,
+  categoryCounts,
+  filterRows,
+  pageCount,
+  pageRows,
+  sortRows,
+  stateFromParams,
+  toListRow,
+  type ListRow,
+  type ListState,
+} from "../../../src/lib/list.ts";
+import type { Dataset } from "../../../src/lib/types.ts";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const ASTRO = join(ROOT, "node_modules", "astro", "bin", "astro.mjs");
 const ENV = { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" };
+
+interface Size {
+  width: number;
+  height: number;
+  touch: boolean;
+}
+type Theme = "light" | "dark";
 
 const SIZES = {
   "phone-small": { width: 320, height: 640, touch: true },
@@ -29,8 +50,10 @@ const SIZES = {
   "tablet-wide": { width: 1024, height: 768, touch: true },
   laptop: { width: 1366, height: 768, touch: false },
   desktop: { width: 1920, height: 1080, touch: false },
-};
-const QUICK_SIZES = ["phone-small", "tablet", "laptop"];
+} satisfies Record<string, Size>;
+type SizeName = keyof typeof SIZES;
+const SIZE_NAMES = Object.keys(SIZES) as SizeName[];
+const QUICK_SIZES: SizeName[] = ["phone-small", "tablet", "laptop"];
 
 const { values: flags, positionals } = parseArgs({
   allowPositionals: true,
@@ -43,14 +66,44 @@ const { values: flags, positionals } = parseArgs({
     out: { type: "string", default: join(tmpdir(), "pogo-stat-translation", "shots") },
   },
 });
-const [command, ...steps] = positionals;
+const [command, ...stepLines] = positionals;
 
-function sizeFrom(value) {
-  if (SIZES[value]) return SIZES[value];
+function sizeFrom(value: string): Size {
+  if (Object.hasOwn(SIZES, value)) return SIZES[value as SizeName];
   const match = /^(\d+)x(\d+)$/.exec(value);
-  if (!match) throw new Error(`Unknown size "${value}". Use WIDTHxHEIGHT or one of: ${Object.keys(SIZES).join(", ")}`);
+  if (!match) throw new Error(`Unknown size "${value}". Use WIDTHxHEIGHT or one of: ${SIZE_NAMES.join(", ")}`);
   const width = Number(match[1]);
   return { width, height: Number(match[2]), touch: width < 1100 };
+}
+
+function themeFrom(value: string): Theme {
+  if (value === "light" || value === "dark") return value;
+  throw new Error(`Unknown theme "${value}". Use light or dark.`);
+}
+
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** One browser tab at one size and theme. Every check and step works through it. */
+class View {
+  browser: Browser;
+  base: string;
+  size: Size;
+  theme: Theme;
+  out: string;
+  errors: string[] = [];
+  context: BrowserContext | undefined;
+  /** Set by openView, which runs before anything reads it. */
+  page!: Page;
+
+  constructor(browser: Browser, base: string, size: Size, theme: Theme, out: string) {
+    this.browser = browser;
+    this.base = base;
+    this.size = size;
+    this.theme = theme;
+    this.out = out;
+  }
 }
 
 // ---- Server ----
@@ -58,18 +111,19 @@ function sizeFrom(value) {
 // Not "localhost": on Linux Astro binds that to ::1 alone, while Node's fetch tries 127.0.0.1 and is refused.
 const HOST = "127.0.0.1";
 
-function freePort() {
+function freePort(): Promise<number> {
   return new Promise((done, fail) => {
     const probe = createServer();
     probe.once("error", fail);
     probe.listen(0, HOST, () => {
-      const { port } = probe.address();
-      probe.close(() => done(port));
+      const address = probe.address();
+      if (address === null || typeof address === "string") return fail(new Error("No port from the probe server"));
+      probe.close(() => done(address.port));
     });
   });
 }
 
-function build() {
+function build(): void {
   const started = Date.now();
   const result = spawnSync(process.execPath, [ASTRO, "build"], { cwd: ROOT, env: ENV, encoding: "utf8" });
   if (result.status !== 0) {
@@ -80,19 +134,26 @@ function build() {
 }
 
 /** Starts node on astro directly, not through npm, so killing the child really frees the port. */
-async function serve() {
+async function serve(): Promise<string> {
   const port = await freePort();
-  const child = spawn(process.execPath, [ASTRO, "preview", "--host", HOST, "--port", String(port)], { cwd: ROOT, env: ENV, stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn(process.execPath, [ASTRO, "preview", "--host", HOST, "--port", String(port)], {
+    cwd: ROOT,
+    env: ENV,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   process.on("exit", () => child.kill());
   let log = "";
   let running = true;
-  child.stdout.on("data", (chunk) => (log += chunk));
-  child.stderr.on("data", (chunk) => (log += chunk));
+  child.stdout.on("data", (chunk: Buffer) => (log += chunk));
+  child.stderr.on("data", (chunk: Buffer) => (log += chunk));
   child.once("exit", () => (running = false));
   const base = `http://${HOST}:${port}${config.base}/`;
   const deadline = Date.now() + 30_000;
   while (running && Date.now() < deadline) {
-    const up = await fetch(base).then((response) => response.ok, () => false);
+    const up = await fetch(base).then(
+      (response) => response.ok,
+      () => false,
+    );
     if (up) return base;
     await new Promise((done) => setTimeout(done, 200));
   }
@@ -101,23 +162,25 @@ async function serve() {
 
 // ---- Browser ----
 
-async function launchBrowser() {
+async function launchBrowser(): Promise<Browser> {
   const wanted = process.env.BROWSER_CHANNEL;
-  const reasons = [];
+  const reasons: string[] = [];
   for (const channel of wanted ? [wanted] : ["msedge", "chrome", "chromium"]) {
     try {
       const browser = await chromium.launch(channel === "chromium" ? {} : { channel });
       console.log(`browser: ${channel} ${browser.version()}`);
       return browser;
     } catch (error) {
-      reasons.push(`${channel}: ${error.message.split("\n")[0]}`);
+      reasons.push(`${channel}: ${message(error).split("\n")[0]}`);
     }
   }
-  throw new Error(`No browser could start. Run: npx playwright-core install --with-deps --only-shell chromium\n${reasons.join("\n")}`);
+  throw new Error(
+    `No browser could start. Run: npx playwright-core install --with-deps --only-shell chromium\n${reasons.join("\n")}`,
+  );
 }
 
 /** Opens a fresh context, because touch emulation can't change on a live one. */
-async function openView(view, url) {
+async function openView(view: View, url: string): Promise<void> {
   await view.context?.close();
   const { width, height, touch } = view.size;
   view.context = await view.browser.newContext({
@@ -130,8 +193,8 @@ async function openView(view, url) {
   view.page = await view.context.newPage();
   view.page.setDefaultTimeout(10_000);
   view.page.on("pageerror", (error) => view.errors.push(error.message));
-  view.page.on("console", (message) => {
-    if (message.type() === "error") view.errors.push(message.text());
+  view.page.on("console", (entry) => {
+    if (entry.type() === "error") view.errors.push(entry.text());
   });
   view.page.on("requestfailed", (request) => view.errors.push(`failed ${request.url()}`));
   view.page.on("response", (response) => {
@@ -140,57 +203,62 @@ async function openView(view, url) {
   await goTo(view, url);
 }
 
-async function goTo(view, url) {
+async function goTo(view: View, url: string): Promise<Response | null> {
   const response = await view.page.goto(url, { waitUntil: "load" });
   // The list renders from script, so "load" fires before it has rows.
-  if (await view.page.locator("#list-body").count()) await view.page.waitForSelector("#list-body tr.row, #list-empty:not([hidden])");
+  if (await view.page.locator("#list-body").count())
+    await view.page.waitForSelector("#list-body tr.row, #list-empty:not([hidden])");
   return response;
 }
 
-const cardsLayout = (page) => page.locator("#list-sort").isVisible();
-const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+const cardsLayout = (page: Page) => page.locator("#list-sort").isVisible();
+const overflow = (page: Page) =>
+  page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 // Not page.url(): it updates a moment after history.replaceState, which is how the list writes its state.
-const href = (page) => page.evaluate(() => location.href);
-const urlState = async (page) => stateFromParams(new URL(await href(page)).searchParams);
+const href = (page: Page) => page.evaluate(() => location.href);
+const urlState = async (page: Page) => stateFromParams(new URL(await href(page)).searchParams);
 
 // ---- Steps for `drive`. `check` uses them too, so both go through the same controls. ----
 
+/** A step takes the words after its name. Whatever it returns is printed. */
+type Step = (view: View, ...args: string[]) => Promise<unknown>;
+
 const STEPS = {
   /** Relative to the site's base path, so "about/" and "/about/" both reach the About page. */
-  async goto(view, target = "") {
+  async goto(view: View, target = "") {
     await goTo(view, new URL(target.replace(/^\/+/, ""), view.base).href);
   },
-  async size(view, value) {
+  async size(view: View, value: string) {
     view.size = sizeFrom(value);
     await openView(view, await href(view.page));
   },
-  async theme(view, value) {
-    view.theme = value;
-    await view.page.emulateMedia({ colorScheme: value });
+  async theme(view: View, value: string) {
+    view.theme = themeFrom(value);
+    await view.page.emulateMedia({ colorScheme: view.theme });
   },
-  async category(view, id) {
+  async category(view: View, id: string) {
     await view.page.locator(`.pill:has(input[value="${id}"])`).click();
   },
   /** Picks a column in whichever control this layout shows. Naming the current column does nothing. */
-  async sort(view, key) {
+  async sort(view: View, key: string) {
     if ((await urlState(view.page)).sort === key) return;
     if (await cardsLayout(view.page)) await view.page.selectOption("#list-sort", key);
     else await view.page.locator(`th[data-key="${key}"] button`).click();
   },
-  async flip(view) {
+  async flip(view: View) {
     if (await cardsLayout(view.page)) await view.page.click("#list-direction");
     else await view.page.locator("#list-head th[aria-sort] button").click();
   },
-  async search(view, ...words) {
+  async search(view: View, ...words: string[]) {
     await view.page.fill("#list-search", words.join(" "));
   },
-  async open(view, id) {
+  async open(view: View, id: string) {
     await view.page.locator(`tr.row[data-id="${id}"] button.name`).click();
   },
-  next: (view) => view.page.click('#list-pager [data-step="next"]'),
-  prev: (view) => view.page.click('#list-pager [data-step="prev"]'),
+  next: (view: View) => view.page.click('#list-pager [data-step="next"]'),
+  prev: (view: View) => view.page.click('#list-pager [data-step="prev"]'),
   /** Uses the page's number when the pager shows it, and otherwise walks there with Next or Previous. */
-  async page(view, target) {
+  async page(view: View, target: string) {
     const want = Number(target);
     const link = view.page.locator(`#list-pager .pages button[data-page="${want}"]`);
     if (await link.isVisible()) {
@@ -198,51 +266,55 @@ const STEPS = {
       return;
     }
     for (let now = (await urlState(view.page)).page; now !== want; now = (await urlState(view.page)).page) {
-      await (now < want ? STEPS.next(view) : STEPS.prev(view));
+      await view.page.click(`#list-pager [data-step="${now < want ? "next" : "prev"}"]`);
     }
   },
-  async rows(view, limit = "5") {
+  async rows(view: View, limit = "5") {
     const lines = await view.page.$$eval(
       "#list-body tr.row",
       (trs, max) =>
         trs.slice(0, max).map((tr) => {
-          const cells = [...tr.querySelectorAll("td[data-label]")].map((td) => `${td.dataset.label} ${td.firstChild.textContent}`);
-          return `#${tr.querySelector(".col-dex").textContent} ${tr.querySelector(".name-text").textContent}: ${cells.join(", ")}`;
+          const cells = [...tr.querySelectorAll<HTMLElement>("td[data-label]")].map(
+            (td) => `${td.dataset.label} ${td.firstChild?.textContent}`,
+          );
+          return `#${tr.querySelector(".col-dex")?.textContent} ${tr.querySelector(".name-text")?.textContent}: ${cells.join(", ")}`;
         }),
       Number(limit),
     );
     return lines.join("\n");
   },
-  count: (view) => view.page.locator("#list-count").textContent(),
-  url: (view) => href(view.page),
-  overflow: async (view) => `${await overflow(view.page)}px`,
-  async click(view, ...selector) {
+  count: (view: View) => view.page.locator("#list-count").textContent(),
+  url: (view: View) => href(view.page),
+  overflow: async (view: View) => `${await overflow(view.page)}px`,
+  async click(view: View, ...selector: string[]) {
     await view.page.locator(selector.join(" ")).first().click();
   },
-  async fill(view, selector, ...words) {
+  async fill(view: View, selector: string, ...words: string[]) {
     await view.page.fill(selector, words.join(" "));
   },
-  async press(view, key) {
+  async press(view: View, key: string) {
     await view.page.keyboard.press(key);
   },
-  text: (view, ...selector) => view.page.locator(selector.join(" ")).first().textContent(),
-  async eval(view, ...code) {
+  text: (view: View, ...selector: string[]) => view.page.locator(selector.join(" ")).first().textContent(),
+  async eval(view: View, ...code: string[]) {
     return JSON.stringify(await view.page.evaluate(code.join(" ")));
   },
   /** `shot name` captures the screen, `shot name full` the whole page. */
-  async shot(view, name = `shot-${Date.now()}`, full) {
+  async shot(view: View, name = `shot-${Date.now()}`, full?: string) {
     const path = join(view.out, `${name}.png`);
     await view.page.screenshot({ path, fullPage: full === "full" });
     return path;
   },
-};
+} satisfies Record<string, Step>;
+const stepByName: Partial<Record<string, Step>> = STEPS;
 
-async function runSteps(view) {
-  for (const line of steps) {
-    const [name, ...args] = line.trim().split(/\s+/);
-    if (!STEPS[name]) throw new Error(`Unknown step "${name}". Steps: ${Object.keys(STEPS).join(", ")}`);
+async function runSteps(view: View): Promise<void> {
+  for (const line of stepLines) {
+    const [name = "", ...args] = line.trim().split(/\s+/);
+    const step = stepByName[name];
+    if (!step) throw new Error(`Unknown step "${name}". Steps: ${Object.keys(STEPS).join(", ")}`);
     console.log(`> ${line}`);
-    const result = await STEPS[name](view, ...args);
+    const result = await step(view, ...args);
     if (result !== undefined) console.log(result);
   }
   if (view.errors.length > 0) {
@@ -255,7 +327,7 @@ async function runSteps(view) {
 
 let passed = 0;
 let failed = 0;
-function check(label, ok, detail = "") {
+function check(label: string, ok: boolean, detail = ""): void {
   if (ok) passed++;
   else {
     failed++;
@@ -263,25 +335,27 @@ function check(label, ok, detail = "") {
   }
 }
 
-const rows = JSON.parse(readFileSync(join(ROOT, "public", "data", "pokemon.json"), "utf8")).pokemon.map(toListRow);
+const dataset = JSON.parse(readFileSync(join(ROOT, "public", "data", "pokemon.json"), "utf8")) as Dataset;
+const rows: ListRow[] = dataset.pokemon.map(toListRow);
 const counts = categoryCounts(rows);
 
-function visible(partial) {
+function visible(partial: Partial<ListState>): ListRow[] {
   const state = { ...DEFAULT_STATE, ...partial };
   return sortRows(filterRows(rows, state), state);
 }
-const onPage = (partial, number = 1) => pageRows(visible(partial), number).map((row) => row.name);
-const forms = (total) => `${total.toLocaleString("en")} ${total === 1 ? "form" : "forms"}`;
-const firstName = (page) => page.locator("#list-body tr.row .name-text").first().textContent();
-const allNames = (page) => page.locator("#list-body tr.row .name-text").allTextContents();
-const countText = (page) => page.locator("#list-count").textContent();
-const pageNumber = async (page) => (await urlState(page)).page;
+const onPage = (partial: Partial<ListState>, number = 1) => pageRows(visible(partial), number).map((row) => row.name);
+const firstOf = (partial: Partial<ListState>) => visible(partial)[0]?.name ?? "(none)";
+const forms = (total: number) => `${total.toLocaleString("en")} ${total === 1 ? "form" : "forms"}`;
+const firstName = (page: Page) => page.locator("#list-body tr.row .name-text").first().textContent();
+const allNames = (page: Page) => page.locator("#list-body tr.row .name-text").allTextContents();
+const countText = async (page: Page) => (await page.locator("#list-count").textContent()) ?? "";
+const pageNumber = async (page: Page) => (await urlState(page)).page;
 
 /** Everything that doesn't depend on the theme, so it only runs once per size. */
-async function checkControls(view, label) {
+async function checkControls(view: View, label: string): Promise<void> {
   const { page, base } = view;
   const cards = await cardsLayout(page);
-  const shot = (name) => page.screenshot({ path: join(view.out, `${label}-${name}.png`) });
+  const shot = (name: string) => page.screenshot({ path: join(view.out, `${label}-${name}.png`) });
 
   for (const [id, total] of Object.entries(counts)) {
     if (id === "all") continue;
@@ -294,32 +368,51 @@ async function checkControls(view, label) {
   check("back to all, clean URL", !(await href(page)).includes("?"), await href(page));
 
   for (const { key, first } of COLUMNS) {
-    for (const direction of [first, first === "asc" ? "desc" : "asc"]) {
+    for (const direction of [first, first === "asc" ? "desc" : "asc"] as const) {
       if (direction === first) await STEPS.sort(view, key);
       else await STEPS.flip(view);
-      const want = visible({ sort: key, direction })[0].name;
+      const want = firstOf({ sort: key, direction });
       check(`sort ${key} ${direction}`, (await firstName(page)) === want, `${await firstName(page)}, wanted ${want}`);
       const state = await urlState(page);
-      check(`sort ${key} ${direction}: in the URL`, state.sort === key && state.direction === direction, await href(page));
+      check(
+        `sort ${key} ${direction}: in the URL`,
+        state.sort === key && state.direction === direction,
+        await href(page),
+      );
       if (!cards) {
         const aria = await page.locator(`th[data-key="${key}"]`).getAttribute("aria-sort");
-        check(`sort ${key} ${direction}: aria-sort`, aria === (direction === "asc" ? "ascending" : "descending"), String(aria));
+        check(
+          `sort ${key} ${direction}: aria-sort`,
+          aria === (direction === "asc" ? "ascending" : "descending"),
+          String(aria),
+        );
       }
     }
   }
 
-  const restored = { category: "starter", sort: "name", direction: "desc", query: "char" };
+  const restored: Partial<ListState> = { category: "starter", sort: "name", direction: "desc", query: "char" };
   await goTo(view, `${base}?category=starter&sort=name&direction=desc&q=char`);
-  check("state restored from the URL", (await firstName(page)) === visible(restored)[0].name, await firstName(page));
-  check("restored category and search", (await page.locator('input[value="starter"]').isChecked()) && (await page.inputValue("#list-search")) === "char");
+  check("state restored from the URL", (await firstName(page)) === firstOf(restored), String(await firstName(page)));
+  check(
+    "restored category and search",
+    (await page.locator('input[value="starter"]').isChecked()) && (await page.inputValue("#list-search")) === "char",
+  );
   check("restored count", (await countText(page)) === forms(visible(restored).length), await countText(page));
   await goTo(view, base);
 
   for (const query of ["flabebe", "6", "farfetchd"]) {
     await STEPS.search(view, query);
     const want = onPage({ query });
-    check(`search "${query}"`, want.length > 0 && String(await allNames(page)) === String(want), String(await allNames(page)));
-    check(`search "${query}": count`, (await countText(page)) === forms(visible({ query }).length), await countText(page));
+    check(
+      `search "${query}"`,
+      want.length > 0 && String(await allNames(page)) === String(want),
+      String(await allNames(page)),
+    );
+    check(
+      `search "${query}": count`,
+      (await countText(page)) === forms(visible({ query }).length),
+      await countText(page),
+    );
     check(`search "${query}": in the URL`, (await urlState(page)).query === query, await href(page));
   }
   await STEPS.search(view, "zzzz");
@@ -331,8 +424,12 @@ async function checkControls(view, label) {
   await STEPS.search(view, "garchomp");
   await STEPS.open(view, "garchomp");
   const detail = page.locator("#detail-garchomp");
+  const bestAttack = rows.find((row) => row.id === "garchomp")?.best.atk;
   check("row opens", await detail.isVisible());
-  check("detail shows the best shape", (await detail.textContent()).includes(String(rows.find((row) => row.id === "garchomp").best.atk)));
+  check(
+    "detail shows the best shape",
+    bestAttack !== undefined && ((await detail.textContent()) ?? "").includes(String(bestAttack)),
+  );
   check("no overflow with details open", (await overflow(page)) <= 0, `${await overflow(page)}px`);
   await detail.scrollIntoViewIfNeeded();
   await shot("detail");
@@ -348,18 +445,25 @@ async function checkControls(view, label) {
 
   if (view.size.touch) {
     const small = await page.evaluate(() =>
-      [...document.querySelectorAll(".pill span, #list-search, #list-sort, #list-direction, #list-pager button, .site-footer a")]
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          ".pill span, #list-search, #list-sort, #list-direction, #list-pager button, .site-footer a",
+        ),
+      ]
         .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height < 38)
-        .map((el) => `${el.tagName} ${el.textContent.trim().slice(0, 20)} ${Math.round(el.getBoundingClientRect().height)}`),
+        .map(
+          (el) =>
+            `${el.tagName} ${(el.textContent ?? "").trim().slice(0, 20)} ${Math.round(el.getBoundingClientRect().height)}`,
+        ),
     );
     check("touch targets are large enough", small.length === 0, small.join(", "));
   }
 }
 
 /** The list's paging, through the controls a visitor uses. */
-async function checkPaging(view, label) {
+async function checkPaging(view: View, label: string): Promise<void> {
   const { page, base } = view;
-  const showing = async (name, want) => {
+  const showing = async (name: string, want: string[]) => {
     const names = await allNames(page);
     check(name, String(names) === String(want), String(names));
   };
@@ -368,9 +472,18 @@ async function checkPaging(view, label) {
   await STEPS.next(view);
   await showing("Next shows page 2", onPage({}, 2));
   check("page 2 is in the URL", (await pageNumber(page)) === 2, await href(page));
-  check("Next keeps keyboard focus", await page.evaluate(() => document.activeElement?.dataset.step === "next"));
+  check(
+    "Next keeps keyboard focus",
+    await page.evaluate(
+      () => document.activeElement instanceof HTMLElement && document.activeElement.dataset.step === "next",
+    ),
+  );
   const top = await page.locator("#list-table").boundingBox();
-  check("the list's top is on screen after paging", top.y >= -1 && top.y < view.size.height, `y=${top.y}`);
+  check(
+    "the list's top is on screen after paging",
+    top !== null && top.y >= -1 && top.y < view.size.height,
+    `y=${top?.y}`,
+  );
   check("no overflow with the pager showing", (await overflow(page)) <= 0, `${await overflow(page)}px`);
   await page.locator("#list-pager").scrollIntoViewIfNeeded();
   await page.screenshot({ path: join(view.out, `${label}-pager.png`) });
@@ -383,10 +496,10 @@ async function checkPaging(view, label) {
   await showing("going to page 3", onPage({}, 3));
   if (await page.locator(".pages").isVisible()) {
     const current = await page.locator('#list-pager [aria-current="page"]').textContent();
-    check("the pager marks the current page", current === "3", current);
+    check("the pager marks the current page", current === "3", String(current));
   } else {
     const status = await page.locator(".page-status").textContent();
-    check("the pager says which page this is", status === `Page 3 of ${pageCount(rows.length)}`, status);
+    check("the pager says which page this is", status === `Page 3 of ${pageCount(rows.length)}`, String(status));
   }
 
   // Legendaries doesn't divide evenly, so its last page shows a remainder.
@@ -395,7 +508,11 @@ async function checkPaging(view, label) {
   await goTo(view, `${base}?category=${category}&page=${last}`);
   await showing("the URL restores a page, with the remainder on the last", onPage({ category }, last));
   check("the last page can't go forward", await page.locator('#list-pager [data-step="next"]').isDisabled());
-  check("the last page is short", (await allNames(page)).length === counts[category] % PAGE_SIZE, String((await allNames(page)).length));
+  check(
+    "the last page is short",
+    (await allNames(page)).length === counts[category] % PAGE_SIZE,
+    String((await allNames(page)).length),
+  );
 
   await goTo(view, `${base}?category=${category}&page=9999`);
   check("a page past the end falls back to the last", (await pageNumber(page)) === last, await href(page));
@@ -420,24 +537,43 @@ async function checkPaging(view, label) {
 }
 
 /** Compares every label with the data, on the pages most likely to break: cut forms, exempt forms and the highest CPs. */
-async function checkCutLabels(view, label) {
+async function checkCutLabels(view: View, label: string): Promise<void> {
   const { page, base } = view;
   const byId = new Map(rows.map((row) => [row.id, row]));
-  const title = (adjustment) => (adjustment < 1 ? `Includes GO's ×${adjustment} cut` : "");
+  const title = (adjustment: number) => (adjustment < 1 ? `Includes GO's ×${adjustment} cut` : "");
 
-  for (const search of ["?sort=cpIdeal", "?sort=cpNow", "?q=necrozma", "?q=mewtwo", "?q=rayquaza", "?q=great%20tusk", "?q=garchomp", "?q=bulbasaur", ""]) {
+  for (const search of [
+    "?sort=cpIdeal",
+    "?sort=cpNow",
+    "?q=necrozma",
+    "?q=mewtwo",
+    "?q=rayquaza",
+    "?q=great%20tusk",
+    "?q=garchomp",
+    "?q=bulbasaur",
+    "",
+  ]) {
     await goTo(view, `${base}${search}`);
     const shown = await page.$$eval("#list-body tr.row", (trs) =>
       trs.map((tr) => ({
-        id: tr.dataset.id,
-        now: tr.querySelector('td[data-label="L50 CP now"] .badge')?.title ?? "",
-        ideal: tr.querySelector('td[data-label="L50 CP ideal"] .badge')?.title ?? "",
+        id: tr.dataset.id ?? "",
+        now: tr.querySelector<HTMLElement>('td[data-label="L50 CP now"] .badge')?.title ?? "",
+        ideal: tr.querySelector<HTMLElement>('td[data-label="L50 CP ideal"] .badge')?.title ?? "",
       })),
     );
-    const wrong = shown.filter(({ id, now, ideal }) => now !== title(byId.get(id).adjustment) || ideal !== title(byId.get(id).idealAdjustment));
-    check(`Cut labels match the data on "${search}"`, shown.length > 0 && wrong.length === 0, wrong.map((row) => row.id).join(", "));
+    const wrong = shown.filter(({ id, now, ideal }) => {
+      const row = byId.get(id);
+      return !row || now !== title(row.adjustment) || ideal !== title(row.idealAdjustment);
+    });
+    check(
+      `Cut labels match the data on "${search}"`,
+      shown.length > 0 && wrong.length === 0,
+      wrong.map((row) => row.id).join(", "),
+    );
     if (!(await cardsLayout(page))) {
-      const clipped = await page.$$eval("#list-body tr.row > td", (cells) => cells.filter((cell) => cell.scrollWidth > cell.clientWidth).map((cell) => cell.textContent));
+      const clipped = await page.$$eval("#list-body tr.row > td", (cells) =>
+        cells.filter((cell) => cell.scrollWidth > cell.clientWidth).map((cell) => cell.textContent),
+      );
       check(`labels fit their cells on "${search}"`, clipped.length === 0, clipped.join(" | "));
     }
   }
@@ -446,17 +582,18 @@ async function checkCutLabels(view, label) {
   await goTo(view, base);
 }
 
-async function checkView(view, label) {
+async function checkView(view: View, label: string): Promise<void> {
   const { page, base } = view;
   const width = view.size.width;
   check("one page of forms renders", (await page.locator("#list-body tr.row").count()) === PAGE_SIZE);
   check("count text", (await countText(page)) === forms(rows.length), await countText(page));
-  check("default sort", (await firstName(page)) === visible({})[0].name, await firstName(page));
+  check("default sort", (await firstName(page)) === firstOf({}), String(await firstName(page)));
   check("no page overflow on the list", (await overflow(page)) <= 0, `${await overflow(page)}px`);
 
   const logo = await page.locator(".logo").boundingBox();
-  check("logo is centred", Math.abs(logo.x + logo.width / 2 - width / 2) <= 2, `${logo.x + logo.width / 2} vs ${width / 2}`);
-  check("logo is at the top", logo.y < 60, `y=${logo.y}`);
+  const centre = logo ? logo.x + logo.width / 2 : NaN;
+  check("logo is centred", Math.abs(centre - width / 2) <= 2, `${centre} vs ${width / 2}`);
+  check("logo is at the top", logo !== null && logo.y < 60, `y=${logo?.y}`);
   await page.screenshot({ path: join(view.out, `${label}-list.png`) });
 
   if (view.theme === "light") {
@@ -474,7 +611,11 @@ async function checkView(view, label) {
   check("About page opens", (await page.locator("h1").textContent()) === "About this site");
   check("no page overflow on About", (await overflow(page)) <= 0, `${await overflow(page)}px`);
   if (width >= 760) {
-    const wide = await page.evaluate(() => [...document.querySelectorAll(".prose pre, .table-wrap")].filter((el) => el.scrollWidth > el.clientWidth + 1).length);
+    const wide = await page.evaluate(
+      () =>
+        [...document.querySelectorAll(".prose pre, .table-wrap")].filter((el) => el.scrollWidth > el.clientWidth + 1)
+          .length,
+    );
     check("formula blocks fit", wide === 0, `${wide} too wide`);
   }
   await page.screenshot({ path: join(view.out, `${label}-about.png`) });
@@ -485,32 +626,35 @@ async function checkView(view, label) {
 }
 
 /** How long sorting every row takes on a CPU slowed 4×, close to a mid-range phone. */
-async function reportSpeed(view) {
-  for (const name of ["phone", "laptop"]) {
+async function reportSpeed(view: View): Promise<void> {
+  for (const name of ["phone", "laptop"] as const) {
     view.size = SIZES[name];
     await openView(view, view.base);
-    const cdp = await view.context.newCDPSession(view.page);
+    const cdp = await view.page.context().newCDPSession(view.page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
-    const times = [];
+    const times: number[] = [];
     for (let i = 0; i < 7; i++) {
       times.push(
         await view.page.evaluate(() => {
-          const cards = document.querySelector("#list-sort").offsetParent !== null;
-          const control = cards ? document.querySelector("#list-direction") : document.querySelector('th[data-key="goFit"] button');
+          const cards = document.querySelector<HTMLElement>("#list-sort")?.offsetParent !== null;
+          const control = document.querySelector<HTMLElement>(
+            cards ? "#list-direction" : 'th[data-key="goFit"] button',
+          );
           const start = performance.now();
-          control.click();
+          control?.click();
           void document.body.offsetHeight;
           return performance.now() - start;
         }),
       );
     }
-    console.log(`speed: ${name}, CPU 4x slower, sorting all ${rows.length} rows: median ${Math.round(times.sort((a, b) => a - b)[3])}ms`);
+    const median = times.sort((a, b) => a - b)[3] ?? NaN;
+    console.log(`speed: ${name}, CPU 4x slower, sorting all ${rows.length} rows: median ${Math.round(median)}ms`);
   }
 }
 
-async function runChecks(view) {
-  for (const name of flags.quick ? QUICK_SIZES : Object.keys(SIZES)) {
-    for (const theme of ["light", "dark"]) {
+async function runChecks(view: View): Promise<void> {
+  for (const name of flags.quick ? QUICK_SIZES : SIZE_NAMES) {
+    for (const theme of ["light", "dark"] as const) {
       Object.assign(view, { size: SIZES[name], theme, errors: [] });
       const before = passed + failed;
       await openView(view, view.base);
@@ -522,8 +666,12 @@ async function runChecks(view) {
   Object.assign(view, { size: SIZES.phone, theme: "light", errors: [] });
   await openView(view, view.base);
   const response = await goTo(view, `${view.base}does-not-exist/`);
-  check("missing page returns 404", response.status() === 404, String(response.status()));
-  check("404 page keeps the site header", (await view.page.locator(".logo").count()) === 1 && (await view.page.locator("h1").textContent()) === "Page not found");
+  check("missing page returns 404", response?.status() === 404, String(response?.status()));
+  check(
+    "404 page keeps the site header",
+    (await view.page.locator(".logo").count()) === 1 &&
+      (await view.page.locator("h1").textContent()) === "Page not found",
+  );
 
   if (!flags.quick) await reportSpeed(view);
   console.log(`screenshots: ${view.out}`);
@@ -534,19 +682,21 @@ async function runChecks(view) {
 // ---- Entry point ----
 
 if (command !== "check" && command !== "drive") {
-  console.error('Usage: driver.mjs check [--quick] | driver.mjs drive [--size phone] [--theme dark] "step" ...');
+  console.error('Usage: driver.ts check [--quick] | driver.ts drive [--size phone] [--theme dark] "step" ...');
   process.exit(2);
 }
 process.on("SIGINT", () => process.exit(130));
 
 try {
   mkdirSync(flags.out, { recursive: true });
+  const size = sizeFrom(flags.size);
+  const theme = themeFrom(flags.theme);
   // The browser goes first, so a machine without one fails at once rather than after a build.
   const browser = await launchBrowser();
   try {
     if (!flags.url && !flags["no-build"]) build();
     const base = flags.url ?? (await serve());
-    const view = { browser, base, size: sizeFrom(flags.size), theme: flags.theme, out: flags.out, errors: [] };
+    const view = new View(browser, base, size, theme, flags.out);
     if (command === "check") await runChecks(view);
     else {
       await openView(view, base);
@@ -556,7 +706,7 @@ try {
     await browser.close();
   }
 } catch (error) {
-  console.error(error.message);
+  console.error(message(error));
   process.exitCode = 1;
 }
 // The preview child would otherwise keep this process alive.

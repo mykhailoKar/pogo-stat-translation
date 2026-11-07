@@ -4,7 +4,7 @@
 
 ## Context
 
-The same formula has to run in two places: the build pipeline (to precompute rankings) and the browser (for the Phase 2 playground, which converts any stat spread live). If they're written separately, they will drift.
+The same formula has to run in two places: the build pipeline (to precompute rankings) and the browser (for a planned playground, which would convert any stat spread live). If they're written separately, they will drift.
 
 ## Decision
 
@@ -18,4 +18,5 @@ The same formula has to run in two places: the build pipeline (to precompute ran
 
 - One implementation of the formula, checked by golden tests taken from the research.
 - TypeScript syntax is limited to what Node can strip (no enums or namespaces), which `erasableSyntaxOnly` enforces.
+- Tooling follows the same rule (added 2026-11-07): `astro.config.ts`, `scripts/` and the browser driver in `.claude/skills/` are TypeScript and type-checked with the rest.
 - Python's banker's rounding was another reason against a Python pipeline. GO rounds .5 up, and the code does that with exact integer arithmetic.

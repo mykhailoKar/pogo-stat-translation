@@ -19,32 +19,65 @@ const percent = (value: number) => `${value.toFixed(1)}%`;
 const commit = (sha: string | undefined) => sha?.slice(0, 7) ?? "unknown";
 ---
 
-<Base title="About" description="What PoGo Stat Translation measures, how GO converts stats, and how GO Fit and ideal CP are calculated.">
+<Base
+  title="About"
+  description="What PoGo Stat Translation measures, how GO converts stats, and how GO Fit and ideal CP are calculated."
+>
   <article class="prose">
     <h1>About this site</h1>
-    <p class="lead">Pokémon GO doesn't use the six stats from the main games. It squeezes them into three with a fixed formula, and that formula suits some stat shapes far better than others. This site scores how well each of the {number.format(figures.forms)} forms comes through.</p>
+    <p class="lead">
+      Pokémon GO doesn't use the six stats from the main games. It squeezes them into three with a fixed formula, and
+      that formula suits some stat shapes far better than others. This site scores how well each of the{" "}
+      {number.format(figures.forms)} forms comes through.
+    </p>
 
     <nav aria-label="On this page">
       <ul>
-        <li><a href="#reading-the-list">Reading the list</a></li>
-        <li><a href="#conversion">How GO converts stats</a></li>
-        <li><a href="#go-fit">How GO Fit works</a></li>
-        <li><a href="#cp">CP now and CP ideal</a></li>
-        <li><a href="#categories">Categories</a></li>
-        <li><a href="#limits">What GO Fit doesn't tell you</a></li>
-        <li><a href="#data">Data and credits</a></li>
+        <li>
+          <a href="#reading-the-list">Reading the list</a>
+        </li>
+        <li>
+          <a href="#conversion">How GO converts stats</a>
+        </li>
+        <li>
+          <a href="#go-fit">How GO Fit works</a>
+        </li>
+        <li>
+          <a href="#cp">CP now and CP ideal</a>
+        </li>
+        <li>
+          <a href="#categories">Categories</a>
+        </li>
+        <li>
+          <a href="#limits">What GO Fit doesn't tell you</a>
+        </li>
+        <li>
+          <a href="#data">Data and credits</a>
+        </li>
       </ul>
     </nav>
 
     <h2 id="reading-the-list">Reading the list</h2>
-    <p>Each row is one form, with 10 forms to a page. Select a column heading to sort by it, and select it again to reverse the order. Select a row to see its stats next to its best shape.</p>
+    <p>
+      Each row is one form, with 10 forms to a page. Select a column heading to sort by it, and select it again to
+      reverse the order. Select a row to see its stats next to its best shape.
+    </p>
     <dl>
       <dt>GO Fit</dt>
-      <dd>The headline score: how close a form comes to the best spread of its own stat points for GO. 100% would mean no rearrangement of its points could do better.</dd>
+      <dd>
+        The headline score: how close a form comes to the best spread of its own stat points for GO. 100% would mean no
+        rearrangement of its points could do better.
+      </dd>
       <dt>Percentile</dt>
-      <dd>The share of forms with a lower GO Fit. A percentile of 70 means the form beats 70% of the others. Megas and Primals are ranked among themselves, because they're temporary and follow different rules.</dd>
+      <dd>
+        The share of forms with a lower GO Fit. A percentile of 70 means the form beats 70% of the others. Megas and
+        Primals are ranked among themselves, because they're temporary and follow different rules.
+      </dd>
       <dt>Attack Fit</dt>
-      <dd>How much of its GO Attack the form keeps, compared with having all its attack points in one stat. Forms with even Attack and Sp. Atk score lowest.</dd>
+      <dd>
+        How much of its GO Attack the form keeps, compared with having all its attack points in one stat. Forms with
+        even Attack and Sp. Atk score lowest.
+      </dd>
       <dt>Defense Fit</dt>
       <dd>The same comparison for GO Defense, using Defense and Sp. Def.</dd>
       <dt>Speed Fit</dt>
@@ -54,7 +87,11 @@ const commit = (sha: string | undefined) => sha?.slice(0, 7) ?? "unknown";
       <dt>L50 CP ideal</dt>
       <dd>The CP its best shape would have at level 50 with perfect IVs, after GO's own cut.</dd>
     </dl>
-    <p>A <strong>Cut</strong> label beside a CP means that number includes one of GO's reductions, explained under <a href="#the-cut">The cut</a>. A <strong>Predicted</strong> label means the form isn't in GO data yet, so its GO stats come from the formula.</p>
+    <p>
+      A <strong>Cut</strong> label beside a CP means that number includes one of GO's reductions, explained under{" "}
+      <a href="#the-cut">The cut</a>. A <strong>Predicted</strong> label means the form isn't in GO data yet, so its GO
+      stats come from the formula.
+    </p>
 
     <h2 id="conversion">How GO converts stats</h2>
     <p>GO's three stats come from the six main-series stats like this:</p>
@@ -62,33 +99,88 @@ const commit = (sha: string | undefined) => sha?.slice(0, 7) ?? "unknown";
 Attack   = 2 × (7/8 × higher + 1/8 × lower) × SpeedMod
 Defense  = 2 × (5/8 × higher + 3/8 × lower) × SpeedMod
 Stamina  = 50 + 1.75 × HP</code></pre>
-    <p>"Higher" and "lower" are the bigger and smaller of Attack and Sp. Atk for GO Attack, and of Defense and Sp. Def for GO Defense. Attack and Defense are rounded twice, before and after applying SpeedMod, and Stamina is rounded down. Three things follow from this:</p>
+    <p>
+      "Higher" and "lower" are the bigger and smaller of Attack and Sp. Atk for GO Attack, and of Defense and Sp. Def
+      for GO Defense. Attack and Defense are rounded twice, before and after applying SpeedMod, and Stamina is rounded
+      down. Three things follow from this:
+    </p>
     <ul>
-      <li><strong>A second attacking stat is nearly wasted.</strong> It counts for 1/8, against 7/8 for the main one.</li>
-      <li><strong>A second defensive stat counts for more,</strong> at 3/8, but one big defensive stat still beats two medium ones.</li>
-      <li><strong>Speed is only a small multiplier.</strong> Each point adds 0.2% to GO Attack and GO Defense.</li>
+      <li>
+        <strong>A second attacking stat is nearly wasted.</strong> It counts for 1/8, against 7/8 for the main one.
+      </li>
+      <li>
+        <strong>A second defensive stat counts for more,</strong> at 3/8, but one big defensive stat still beats two
+        medium ones.
+      </li>
+      <li>
+        <strong>Speed is only a small multiplier.</strong> Each point adds 0.2% to GO Attack and GO Defense.
+      </li>
     </ul>
     <h3 id="the-cut">The cut</h3>
-    <p>Very strong Pokémon lose 9%. If a form's stats would reach 4,000 CP at level 40 with perfect IVs, GO multiplies all three stats by 0.91, and Stamina then rounds to the nearest whole number. Megas and Primals skip this rule, although a few of the strongest use a fixed ×0.97 instead.</p>
-    <p>The list marks these reductions with a <strong>Cut</strong> label. Beside L50 CP now, it means GO really does reduce that form, which is true of {figures.cutForms} forms. Beside L50 CP ideal, it means the best shape would be reduced: either the form already is, or its best shape would reach the line. The label follows GO's real stats, and a few unreleased forms don't follow the line: some are cut below it, and others are left uncut above it.</p>
+    <p>
+      Very strong Pokémon lose 9%. If a form's stats would reach 4,000 CP at level 40 with perfect IVs, GO multiplies
+      all three stats by 0.91, and Stamina then rounds to the nearest whole number. Megas and Primals skip this rule,
+      although a few of the strongest use a fixed ×0.97 instead.
+    </p>
+    <p>
+      The list marks these reductions with a <strong>Cut</strong> label. Beside L50 CP now, it means GO really does
+      reduce that form, which is true of {figures.cutForms} forms. Beside L50 CP ideal, it means the best shape would be
+      reduced: either the form already is, or its best shape would reach the line. The label follows GO's real stats,
+      and a few unreleased forms don't follow the line: some are cut below it, and others are left uncut above it.
+    </p>
     <h3>Older stats</h3>
-    <p>GO doesn't always use a form's current stats. Forms from Gens I–II use their Gen VI stats, and Gens III–VII use their Gen VII stats. Forms from Gen VIII onwards use current stats. The site uses whichever stats GO uses, and says so in a row's details when they differ.</p>
-    <p>Together these rules reproduce GO's real stats exactly for {number.format(figures.exact)} of the {number.format(figures.withGoData)} forms with GO data. The remaining {figures.withGoData - figures.exact} are hand-set or rounded differently by GO, and they're listed in the <a href="https://github.com/mykhailoKar/pogo-stat-translation/blob/main/data/reports/validation.md">validation report</a>.</p>
+    <p>
+      GO doesn't always use a form's current stats. Forms from Gens I–II use their Gen VI stats, and Gens III–VII use
+      their Gen VII stats. Forms from Gen VIII onwards use current stats. The site uses whichever stats GO uses, and
+      says so in a row's details when they differ.
+    </p>
+    <p>
+      Together these rules reproduce GO's real stats exactly for {number.format(figures.exact)} of the{" "}
+      {number.format(figures.withGoData)} forms with GO data. The remaining {figures.withGoData - figures.exact} are
+      hand-set or rounded differently by GO, and they're listed in the{" "}
+      <a href="https://github.com/mykhailoKar/pogo-stat-translation/blob/main/data/reports/validation.md">
+        validation report
+      </a>
+      .
+    </p>
 
     <h2 id="go-fit">How GO Fit works</h2>
-    <p>GO Fit compares a form with the best version of itself. HP stays the same, and the rest of its stat points are rearranged to suit GO:</p>
+    <p>
+      GO Fit compares a form with the best version of itself. HP stays the same, and the rest of its stat points are
+      rearranged to suit GO:
+    </p>
     <ol>
-      <li><strong>Add up the points.</strong> Attack points are Attack + Sp. Atk, and defense points are Defense + Sp. Def. The total of these plus Speed stays fixed.</li>
-      <li><strong>Try every Speed from 1 to 255.</strong> Whatever Speed gives up or takes is shared between attack and defense points in the form's own ratio, so an attacker stays an attacker.</li>
-      <li><strong>Concentrate.</strong> The higher stat of each pair takes all its points, up to the main-series limit of 255, and the other stat keeps at least 1.</li>
-      <li><strong>Convert each candidate</strong> with the form's own cut multiplier, and keep the best one.</li>
+      <li>
+        <strong>Add up the points.</strong> Attack points are Attack + Sp. Atk, and defense points are Defense + Sp.
+        Def. The total of these plus Speed stays fixed.
+      </li>
+      <li>
+        <strong>Try every Speed from 1 to 255.</strong> Whatever Speed gives up or takes is shared between attack and
+        defense points in the form's own ratio, so an attacker stays an attacker.
+      </li>
+      <li>
+        <strong>Concentrate.</strong> The higher stat of each pair takes all its points, up to the main-series limit of
+        255, and the other stat keeps at least 1.
+      </li>
+      <li>
+        <strong>Convert each candidate</strong> with the form's own cut multiplier, and keep the best one.
+      </li>
     </ol>
-    <p>"Best" means the highest stat product. Stat product is GO Attack × GO Defense × GO Stamina, with 15 added to each for perfect IVs. Stamina is the same on both sides, so it cancels out, and level does too. That leaves:</p>
+    <p>
+      "Best" means the highest stat product. Stat product is GO Attack × GO Defense × GO Stamina, with 15 added to each
+      for perfect IVs. Stamina is the same on both sides, so it cancels out, and level does too. That leaves:
+    </p>
     <pre><code>GO Fit = 100 × (A + 15) × (D + 15)
          ÷ [(best A + 15) × (best D + 15)]</code></pre>
-    <p>Stat product treats Attack and Defense equally. CP would count Defense at half weight, which would make Defense Fit look unimportant next to the other two.</p>
+    <p>
+      Stat product treats Attack and Defense equally. CP would count Defense at half weight, which would make Defense
+      Fit look unimportant next to the other two.
+    </p>
     <h3>The three fits</h3>
-    <p>GO Fit splits exactly into three parts, so you can see where a form loses out. Take A1 and D1 to be GO Attack and Defense with each pair concentrated, but Speed left alone:</p>
+    <p>
+      GO Fit splits exactly into three parts, so you can see where a form loses out. Take A1 and D1 to be GO Attack and
+      Defense with each pair concentrated, but Speed left alone:
+    </p>
     <pre><code>Attack Fit  = (A + 15) ÷ (A1 + 15)
 Defense Fit = (D + 15) ÷ (D1 + 15)
 Speed Fit   = (A1 + 15) × (D1 + 15)
@@ -96,10 +188,19 @@ Speed Fit   = (A1 + 15) × (D1 + 15)
 
 GO Fit = Attack Fit × Defense Fit × Speed Fit</code></pre>
     <h3>Example: {g.name}</h3>
-    <p>{g.name}'s stats are {spread(g.ms)} (HP/Atk/Def/SpA/SpD/Spe), which GO turns into {g.go.atk} Attack and {g.go.def} Defense. It has {example.attackPoints} attack points and {example.defensePoints} defense points.</p>
+    <p>
+      {g.name}'s stats are {spread(g.ms)} (HP/Atk/Def/SpA/SpD/Spe), which GO turns into {g.go.atk} Attack and {g.go.def}{" "}
+      Defense. It has {example.attackPoints} attack points and {example.defensePoints} defense points.
+    </p>
     <ul>
-      <li><strong>Concentrated, same Speed:</strong> {example.concentratedGo.atk} Attack and {example.concentratedGo.def} Defense.</li>
-      <li><strong>Best shape:</strong> {spread(g.best)}, which gives {example.bestGo.atk} Attack and {example.bestGo.def} Defense. Its ideal Speed is {g.best.spe}, well below its real {g.ms.spe}.</li>
+      <li>
+        <strong>Concentrated, same Speed:</strong> {example.concentratedGo.atk} Attack and {example.concentratedGo.def}{" "}
+        Defense.
+      </li>
+      <li>
+        <strong>Best shape:</strong> {spread(g.best)}, which gives {example.bestGo.atk} Attack and {example.bestGo.def}{" "}
+        Defense. Its ideal Speed is {g.best.spe}, well below its real {g.ms.spe}.
+      </li>
     </ul>
     <p>With 15 added to each for perfect IVs:</p>
     <pre><code>Attack Fit  = {example.actual.atk} ÷ {example.concentrated.atk} = {percent(g.attackFit)}
@@ -108,49 +209,143 @@ Speed Fit   = {example.concentrated.atk} × {example.concentrated.def} ÷ ({exam
 
 GO Fit      = {example.actual.atk} × {example.actual.def} ÷ ({example.best.atk} × {example.best.def}) = {percent(g.goFit)}</code></pre>
     <h3>Why Speed is so often too high</h3>
-    <p>A Speed point adds 0.2%, but a point in a main stat usually adds more. As a rule of thumb, ideal Speed is about <code>(BST − HP − 425) / 2</code>, and never below 1. Ideal Speed is 1 for {figures.idealSpeedOne} forms, and only {figures.wantsMoreSpeed} forms would want more Speed than they have. The rule stops working once a main stat reaches 255, because spare points then flow into Speed. {speedCapped.name}'s Sp. Atk reaches that limit, so its ideal Speed is {speedCapped.best.spe}, above its real {speedCapped.ms.spe}.</p>
+    <p>
+      A Speed point adds 0.2%, but a point in a main stat usually adds more. As a rule of thumb, ideal Speed is about{" "}
+      <code>(BST − HP − 425) / 2</code>, and never below 1. Ideal Speed is 1 for {figures.idealSpeedOne} forms, and only{" "}
+      {figures.wantsMoreSpeed} forms would want more Speed than they have. The rule stops working once a main stat
+      reaches 255, because spare points then flow into Speed. {speedCapped.name}'s Sp. Atk reaches that limit, so its
+      ideal Speed is {speedCapped.best.spe}, above its real {speedCapped.ms.spe}.
+    </p>
 
     <h2 id="cp">CP now and CP ideal</h2>
     <p>Both columns use level 50 and perfect IVs:</p>
     <pre><code>CP = (A + 15) × √(D + 15) × √(S + 15) × CPM² / 10</code></pre>
     <p>S is GO Stamina, and CPM is GO's level multiplier, 0.8403 at level 50. CP now uses the form's real GO stats.</p>
-    <p>CP ideal runs the best shape through GO's real rules, including the 4,000 CP line. {g.name}'s best shape would be {example.bestGo.atk}/{example.bestGo.def}/{example.bestGo.sta} before the cut and {g.ideal.atk}/{g.ideal.def}/{g.ideal.sta} after it, which is {number.format(g.cpIdeal)} CP. The cut newly applies to {number.format(figures.newlyCutIdeals)} forms this way, and every form's ideal still stays above its current CP.</p>
-    <p>GO Fit doesn't do this. It compares both shapes under the form's own multiplier, so the score reflects stat shape alone. If the best shape took a cut the form doesn't, forms just under the line would score well for their power rather than their shape.</p>
+    <p>
+      CP ideal runs the best shape through GO's real rules, including the 4,000 CP line. {g.name}'s best shape would be{" "}
+      {example.bestGo.atk}/{example.bestGo.def}/{example.bestGo.sta} before the cut and {g.ideal.atk}/{g.ideal.def}/
+      {g.ideal.sta} after it, which is {number.format(g.cpIdeal)} CP. The cut newly applies to{" "}
+      {number.format(figures.newlyCutIdeals)} forms this way, and every form's ideal still stays above its current CP.
+    </p>
+    <p>
+      GO Fit doesn't do this. It compares both shapes under the form's own multiplier, so the score reflects stat shape
+      alone. If the best shape took a cut the form doesn't, forms just under the line would score well for their power
+      rather than their shape.
+    </p>
     <p>The best shape is chosen for stat product, not CP, so it isn't the highest CP a form's points could reach.</p>
 
     <h2 id="categories">Categories</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Category</th><th scope="col">Forms</th><th scope="col">What's in it</th></tr></thead>
+        <thead>
+          <tr>
+            <th scope="col">Category</th>
+            <th scope="col">Forms</th>
+            <th scope="col">What's in it</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><th scope="row">{CATEGORIES[0].label}</th><td>{number.format(counts.all)}</td><td>Every form, including Megas and Primals.</td></tr>
-          <tr><th scope="row">{CATEGORIES[1].label}</th><td>{counts.legendary}</td><td>Forms of species PokéAPI flags as legendary, including their Megas and Primals. That leaves out Ultra Beasts and most Paradox Pokémon, though Koraidon and Miraidon count.</td></tr>
-          <tr><th scope="row">{CATEGORIES[2].label}</th><td>{counts.mega}</td><td>All Mega Evolutions and Primal Reversions.</td></tr>
-          <tr><th scope="row">{CATEGORIES[3].label}</th><td>{counts.mythical}</td><td>Forms of species PokéAPI flags as mythical, including their Megas.</td></tr>
-          <tr><th scope="row">{CATEGORIES[4].label}</th><td>{counts.starter}</td><td>All 27 starter lines from Gen I to Gen IX, every stage, plus their regional forms and Megas. Pikachu and Eevee aren't included.</td></tr>
-          <tr><th scope="row">{CATEGORIES[5].label}</th><td>{counts["fully-evolved"]}</td><td>Forms that can't evolve further, including Megas, Primals and Pokémon with no evolutions at all. Regular Corsola counts, for example, though Galarian Corsola doesn't.</td></tr>
+          <tr>
+            <th scope="row">{CATEGORIES[0].label}</th>
+            <td>{number.format(counts.all)}</td>
+            <td>Every form, including Megas and Primals.</td>
+          </tr>
+          <tr>
+            <th scope="row">{CATEGORIES[1].label}</th>
+            <td>{counts.legendary}</td>
+            <td>
+              Forms of species PokéAPI flags as legendary, including their Megas and Primals. That leaves out Ultra
+              Beasts and most Paradox Pokémon, though Koraidon and Miraidon count.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">{CATEGORIES[2].label}</th>
+            <td>{counts.mega}</td>
+            <td>All Mega Evolutions and Primal Reversions.</td>
+          </tr>
+          <tr>
+            <th scope="row">{CATEGORIES[3].label}</th>
+            <td>{counts.mythical}</td>
+            <td>Forms of species PokéAPI flags as mythical, including their Megas.</td>
+          </tr>
+          <tr>
+            <th scope="row">{CATEGORIES[4].label}</th>
+            <td>{counts.starter}</td>
+            <td>
+              All 27 starter lines from Gen I to Gen IX, every stage, plus their regional forms and Megas. Pikachu and
+              Eevee aren't included.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">{CATEGORIES[5].label}</th>
+            <td>{counts["fully-evolved"]}</td>
+            <td>
+              Forms that can't evolve further, including Megas, Primals and Pokémon with no evolutions at all. Regular
+              Corsola counts, for example, though Galarian Corsola doesn't.
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
-    <p>A Mega or Primal keeps the percentile from its own ranking in every category, so its percentile compares it with other Megas and Primals only. Gigantamax, Totem and purely cosmetic forms are left out.</p>
+    <p>
+      A Mega or Primal keeps the percentile from its own ranking in every category, so its percentile compares it with
+      other Megas and Primals only. Gigantamax, Totem and purely cosmetic forms are left out.
+    </p>
 
     <h2 id="limits">What GO Fit doesn't tell you</h2>
     <ul>
-      <li><strong>It isn't a strength ranking.</strong> {top.name} tops the list at {percent(top.goFit)}, ahead of {speedCapped.name} at {percent(speedCapped.goFit)}. Use the CP columns for strength.</li>
-      <li><strong>No form reaches 100%.</strong> Scores run from {percent(figures.lowestScore)} to {percent(figures.highestScore)}, with a median of {percent(figures.medianScore)}, because a perfect score would need almost nothing in a form's second attacking and defensive stats. That's why the percentile sits next to the score.</li>
-      <li><strong>It ignores moves, typing and leagues.</strong> A form can fit GO's formula badly and still be excellent in battle, or the other way round.</li>
-      <li><strong>Weak forms lean low.</strong> Their ideal Speed is usually 1, so whatever Speed they have counts against them. Forms with a stat total under {figures.weakBst} average {percent(figures.weakMean)}, against {percent(figures.strongMean)} at {figures.strongBst} and above.</li>
-      <li><strong>The best shape is a yardstick.</strong> It's what the form's points could do, not a Pokémon you can catch.</li>
-      <li><strong>Whole numbers add a little noise.</strong> The best shape uses whole stats, as the games do, so it can miss a slightly better spread one point away. Scoring a best shape again gives between {percent(figures.lowestRescore)} and 100%, not exactly 100%.</li>
+      <li>
+        <strong>It isn't a strength ranking.</strong> {top.name} tops the list at {percent(top.goFit)}, ahead of{" "}
+        {speedCapped.name} at {percent(speedCapped.goFit)}. Use the CP columns for strength.
+      </li>
+      <li>
+        <strong>No form reaches 100%.</strong> Scores run from {percent(figures.lowestScore)} to{" "}
+        {percent(figures.highestScore)}, with a median of {percent(figures.medianScore)}, because a perfect score would
+        need almost nothing in a form's second attacking and defensive stats. That's why the percentile sits next to the
+        score.
+      </li>
+      <li>
+        <strong>It ignores moves, typing and leagues.</strong> A form can fit GO's formula badly and still be excellent
+        in battle, or the other way round.
+      </li>
+      <li>
+        <strong>Weak forms lean low.</strong> Their ideal Speed is usually 1, so whatever Speed they have counts against
+        them. Forms with a stat total under {figures.weakBst} average {percent(figures.weakMean)}, against{" "}
+        {percent(figures.strongMean)} at {figures.strongBst} and above.
+      </li>
+      <li>
+        <strong>The best shape is a yardstick.</strong> It's what the form's points could do, not a Pokémon you can
+        catch.
+      </li>
+      <li>
+        <strong>Whole numbers add a little noise.</strong> The best shape uses whole stats, as the games do, so it can
+        miss a slightly better spread one point away. Scoring a best shape again gives between{" "}
+        {percent(figures.lowestRescore)} and 100%, not exactly 100%.
+      </li>
     </ul>
 
     <h2 id="data">Data and credits</h2>
     <ul>
-      <li>Main-series data comes from <a href="https://github.com/PokeAPI/pokeapi">PokéAPI</a> (BSD-3-Clause), commit <code>{commit(dataset.sources.pokeapi?.commit)}</code>.</li>
-      <li>GO stats come from <a href="https://github.com/pvpoke/pvpoke">PvPoke</a> (MIT), commit <code>{commit(dataset.sources.pvpoke?.commit)}</code>.</li>
-      <li>The conversion formula draws on <a href="https://bulbapedia.bulbagarden.net/wiki/Stat_(GO)">Bulbapedia</a> and the <a href="https://www.dittobase.com/pokemon-go/stat-converter">Dittobase stat converter</a>.</li>
+      <li>
+        Main-series data comes from <a href="https://github.com/PokeAPI/pokeapi">PokéAPI</a> (BSD-3-Clause), commit{" "}
+        <code>{commit(dataset.sources.pokeapi?.commit)}</code>.
+      </li>
+      <li>
+        GO stats come from <a href="https://github.com/pvpoke/pvpoke">PvPoke</a> (MIT), commit{" "}
+        <code>{commit(dataset.sources.pvpoke?.commit)}</code>.
+      </li>
+      <li>
+        The conversion formula draws on <a href="https://bulbapedia.bulbagarden.net/wiki/Stat_(GO)">Bulbapedia</a> and
+        the <a href="https://www.dittobase.com/pokemon-go/stat-converter">Dittobase stat converter</a>.
+      </li>
     </ul>
-    <p>The full dataset is available as <a href={`${home}data/pokemon.json`}>JSON</a>, and the code and methodology are on <a href="https://github.com/mykhailoKar/pogo-stat-translation">GitHub</a>.</p>
-    <p>Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely Explore. This is an unofficial fan project and isn't affiliated with any of them.</p>
+    <p>
+      The full dataset is available as <a href={`${home}data/pokemon.json`}>JSON</a>, and the code and methodology are
+      on <a href="https://github.com/mykhailoKar/pogo-stat-translation">GitHub</a>.
+    </p>
+    <p>
+      Pokémon and Pokémon GO are trademarks of Nintendo, Creatures Inc., GAME FREAK and Scopely Explore. This is an
+      unofficial fan project and isn't affiliated with any of them.
+    </p>
   </article>
 </Base>

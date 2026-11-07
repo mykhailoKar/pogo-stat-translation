@@ -1,0 +1,15 @@
+# Generated: rewritten by npm run build:data, npm run fetch:update or npm run draw:logo
+public/data/
+data/reports/
+data/sources.lock.json
+data/raw/
+src/components/Logo.astro
+public/favicon.svg
+package-lock.json
+
+# Build output
+dist/
+.astro/
+
+# Prose stays as written. docs/research/ holds the owner's original files, which are never edited.
+*.md
