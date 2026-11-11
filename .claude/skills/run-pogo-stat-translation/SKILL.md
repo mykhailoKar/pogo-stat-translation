@@ -132,6 +132,9 @@ npm run verify
 - **`open <id>` only finds rows on the current page.** There are 10 per page, so search first. The id is the form's dataset id, such as `rayquaza-mega`.
 - **For a far page, use `goto ?page=50`.** `page 50` from page 1 clicks 5> nine times and Next four times, because the pager only shows nearby numbers.
 - **Below 700px the pager hides its numbers** and shows "Page X of Y" on a row of its own, so `page <n>` walks there.
+- **A short page has hidden filler rows** (`tr.row.filler`) that keep it as tall as a full one, so the pager stays put ([decision 0010](../../../docs/decisions/0010-pager-stays-in-place.md)). Select real rows with `tr.row:not(.filler)`, as the driver's `ROWS` does. The pager also holds a hidden `.pages-sizer` run of numbers that sets its width.
+- **Rows are one line high, so long names end in "…".** The cell's `title` has the whole name only when it's cut, and an open row shows it whole. Rows close when the page changes.
+- **`check` visits every page** of the full list and of each category with a short last page, at each size, and fails if the pager's buttons move.
 - **Percentile doesn't change between categories,** and Megas are ranked among themselves. Two forms showing 100.0 isn't a bug.
 - **Name sort uses the species,** so Mega Charizard X sits next to Charizard and the visible names won't look alphabetical.
 - **Headings look thin in a Linux container.** The page falls back to WenQuanYi Zen Hei there, which has no bold, although the CSS still says 700. It isn't a site bug, so judge layout from those screenshots, not type weight.

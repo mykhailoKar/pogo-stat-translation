@@ -24,6 +24,7 @@ import {
   filterRows,
   pageCount,
   pageRows,
+  paramsFromState,
   sortRows,
   stateFromParams,
   toListRow,
@@ -215,6 +216,8 @@ async function goTo(view: View, url: string): Promise<Response | null> {
   return response;
 }
 
+/** The list's rows, leaving out the hidden fillers that pad a short page to full height. */
+const ROWS = "#list-body tr.row:not(.filler)";
 const cardsLayout = (page: Page) => page.locator("#list-sort").isVisible();
 const overflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -283,7 +286,7 @@ const STEPS = {
   },
   async rows(view: View, limit = "5") {
     const lines = await view.page.$$eval(
-      "#list-body tr.row",
+      ROWS,
       (trs, max) =>
         trs.slice(0, max).map((tr) => {
           const cells = [...tr.querySelectorAll<HTMLElement>("td[data-label]")].map(
@@ -358,9 +361,19 @@ function visible(partial: Partial<ListState>): ListRow[] {
 const onPage = (partial: Partial<ListState>, number = 1) => pageRows(visible(partial), number).map((row) => row.name);
 const firstOf = (partial: Partial<ListState>) => visible(partial)[0]?.name ?? "(none)";
 const forms = (total: number) => `${total.toLocaleString("en")} ${total === 1 ? "form" : "forms"}`;
-const firstName = (page: Page) => page.locator("#list-body tr.row .name-text").first().textContent();
-const allNames = (page: Page) => page.locator("#list-body tr.row .name-text").allTextContents();
+const firstName = (page: Page) => page.locator(`${ROWS} .name-text`).first().textContent();
+const allNames = (page: Page) => page.locator(`${ROWS} .name-text`).allTextContents();
 const countText = async (page: Page) => (await page.locator("#list-count").textContent()) ?? "";
+/** Where each of the pager's step buttons sits, from the top left of the page rather than the screen. */
+const stepSpots = (page: Page) =>
+  page.$$eval("#list-pager [data-step]", (buttons) =>
+    buttons
+      .map((button) => {
+        const box = button.getBoundingClientRect();
+        return `${button.getAttribute("data-step")}@${Math.round(box.left + scrollX)},${Math.round(box.top + scrollY)}`;
+      })
+      .join(" "),
+  );
 const pageNumber = async (page: Page) => (await urlState(page)).page;
 
 /** The pills, the count and the URL all match these categories. */
@@ -458,7 +471,7 @@ async function checkControls(view: View, label: string): Promise<void> {
   const shot = (name: string) => page.screenshot({ path: join(view.out, `${label}-${name}.png`) });
 
   // Each row shows one icon per type, and each icon points at a symbol the page really has.
-  const shown = await page.$$eval("#list-body tr.row", (trs) =>
+  const shown = await page.$$eval(ROWS, (trs) =>
     trs.map((tr) => {
       const uses = [...tr.querySelectorAll(".types use")];
       return {
@@ -591,8 +604,10 @@ async function checkPaging(view: View, label: string): Promise<void> {
   };
 
   check("the first page can't go back", await page.locator('#list-pager [data-step="prev"]').isDisabled());
+  const spots = await stepSpots(page);
   await STEPS.next(view);
   await showing("Next shows page 2", onPage({}, 2));
+  check("Next stays where it was", (await stepSpots(page)) === spots, await stepSpots(page));
   check("page 2 is in the URL", (await pageNumber(page)) === 2, await href(page));
   check(
     "Next keeps keyboard focus",
@@ -638,6 +653,15 @@ async function checkPaging(view: View, label: string): Promise<void> {
   );
   const jumpName = await page.locator('#list-pager [data-step="next5"]').getAttribute("aria-label");
   check("5>'s name spells out what it does", jumpName === `Forward ${PAGE_JUMP} pages`, String(jumpName));
+  check("5> stays where it was", (await stepSpots(page)) === spots, await stepSpots(page));
+
+  // An open row makes its page taller, so a new page starts with every row closed.
+  const opened = (await page.locator(ROWS).first().getAttribute("data-id")) ?? "";
+  await STEPS.open(view, opened);
+  await STEPS.next(view);
+  await STEPS.prev(view);
+  check("a row closes when its page is left", (await page.locator("#list-body tr.detail").count()) === 0, opened);
+  check("the pager is back in place after an open row", (await stepSpots(page)) === spots, await stepSpots(page));
 
   // Legendaries doesn't divide evenly, so its last page shows a remainder.
   const category = "legendary";
@@ -678,6 +702,66 @@ async function checkPaging(view: View, label: string): Promise<void> {
   await goTo(view, base);
 }
 
+/**
+ * Every page of a list puts the pager's buttons in the same place, short last pages included, so clicking Next or 5>
+ * again and again keeps hitting them (#14). Pages are visited the way Back and Forward reach them, which redraws the
+ * list as a click does and takes a fraction of the time.
+ */
+async function checkPagerStays(view: View): Promise<void> {
+  const { page, base } = view;
+  const lists: { name: string; state: Partial<ListState> }[] = [
+    { name: "all forms", state: {} },
+    ...CATEGORIES.flatMap(({ id }) =>
+      id !== "all" && counts[id] % PAGE_SIZE !== 0 ? [{ name: id, state: { include: [id] } }] : [],
+    ),
+  ];
+  for (const { name, state } of lists) {
+    const pages = pageCount(visible(state).length);
+    await goTo(view, `${base}?${paramsFromState({ ...DEFAULT_STATE, ...state })}`);
+    const found = new Map<string, number[]>();
+    for (let number = 1; number <= pages; number++) {
+      await page.evaluate((to) => {
+        const params = new URLSearchParams(location.search);
+        params.set("page", String(to));
+        history.pushState(null, "", `?${params}`);
+        dispatchEvent(new PopStateEvent("popstate"));
+      }, number);
+      const spot = await stepSpots(page);
+      found.set(spot, [...(found.get(spot) ?? []), number]);
+    }
+    check(
+      `the pager stays put on all ${pages} pages of ${name}`,
+      found.size === 1,
+      [...found].map(([spot, numbers]) => `${spot} on pages ${numbers.slice(0, 6).join(",")}`).join(" | "),
+    );
+  }
+  await goTo(view, base);
+}
+
+/** The longest name, cut short by its one line or not, and whole once its row is open. */
+async function checkCutNames(view: View): Promise<void> {
+  const { page } = view;
+  const longest = rows.reduce((a, b) => (b.name.length > a.name.length ? b : a));
+  const whole = `${longest.name}: ${longest.types.map((type) => type.charAt(0).toUpperCase() + type.slice(1)).join(", ")}`;
+  const nameOf = () =>
+    page.locator(`${ROWS}[data-id="${longest.id}"] .name-cell`).evaluate((cell) => {
+      const text = cell.querySelector(".name-text");
+      return { cut: text !== null && text.scrollWidth > text.clientWidth, title: cell.getAttribute("title") ?? "" };
+    });
+  await STEPS.search(view, longest.name);
+  const closed = await nameOf();
+  check(
+    "a cut name has a tooltip with the whole name, and a whole one has none",
+    closed.title === (closed.cut ? whole : ""),
+    JSON.stringify(closed),
+  );
+  await STEPS.open(view, longest.id);
+  const opened = await nameOf();
+  check("an open row shows the whole name", !opened.cut && opened.title === "", JSON.stringify(opened));
+  await STEPS.open(view, longest.id);
+  await STEPS.search(view, "");
+}
+
 /** Compares every label with the data, on the pages most likely to break: cut forms, exempt forms and the highest CPs. */
 async function checkCutLabels(view: View, label: string): Promise<void> {
   const { page, base } = view;
@@ -696,7 +780,7 @@ async function checkCutLabels(view: View, label: string): Promise<void> {
     "",
   ]) {
     await goTo(view, `${base}${search}`);
-    const shown = await page.$$eval("#list-body tr.row", (trs) =>
+    const shown = await page.$$eval(ROWS, (trs) =>
       trs.map((tr) => ({
         id: tr.dataset.id ?? "",
         now: tr.querySelector<HTMLElement>('td[data-label="L50 CP now"] .badge')?.title ?? "",
@@ -713,7 +797,7 @@ async function checkCutLabels(view: View, label: string): Promise<void> {
       wrong.map((row) => row.id).join(", "),
     );
     if (!(await cardsLayout(page))) {
-      const clipped = await page.$$eval("#list-body tr.row > td", (cells) =>
+      const clipped = await page.$$eval(`${ROWS} > td`, (cells) =>
         cells.filter((cell) => cell.scrollWidth > cell.clientWidth).map((cell) => cell.textContent),
       );
       check(`labels fit their cells on "${search}"`, clipped.length === 0, clipped.join(" | "));
@@ -727,7 +811,7 @@ async function checkCutLabels(view: View, label: string): Promise<void> {
 async function checkView(view: View, label: string): Promise<void> {
   const { page, base } = view;
   const width = view.size.width;
-  check("one page of forms renders", (await page.locator("#list-body tr.row").count()) === PAGE_SIZE);
+  check("one page of forms renders", (await page.locator(ROWS).count()) === PAGE_SIZE);
   check("count text", (await countText(page)) === forms(rows.length), await countText(page));
   check("default sort", (await firstName(page)) === firstOf({}), String(await firstName(page)));
   check("no page overflow on the list", (await overflow(page)) <= 0, `${await overflow(page)}px`);
@@ -736,11 +820,19 @@ async function checkView(view: View, label: string): Promise<void> {
   const centre = logo ? logo.x + logo.width / 2 : NaN;
   check("logo is centred", Math.abs(centre - width / 2) <= 2, `${centre} vs ${width / 2}`);
   check("logo is at the top", logo !== null && logo.y < 60, `y=${logo?.y}`);
+  // Decision 0006: on a laptop, ten rows and the pager fit the screen without scrolling.
+  if (!view.size.touch) {
+    const pager = await page.locator("#list-pager").boundingBox();
+    const bottom = pager ? pager.y + pager.height : NaN;
+    check("ten rows and the pager fit the screen", bottom <= view.size.height, `pager ends at ${bottom}px`);
+  }
   await page.screenshot({ path: join(view.out, `${label}-list.png`) });
 
   if (view.theme === "light") {
     await checkControls(view, label);
     await checkPaging(view, label);
+    await checkPagerStays(view);
+    await checkCutNames(view);
     await checkCutLabels(view, label);
   }
 
@@ -762,7 +854,7 @@ async function checkView(view: View, label: string): Promise<void> {
   }
   await page.screenshot({ path: join(view.out, `${label}-about.png`) });
   await page.locator(".logo").click();
-  await page.waitForSelector("#list-body tr.row");
+  await page.waitForSelector(ROWS);
   check("logo returns to the list", (await href(page)) === base, await href(page));
   check("no console or network errors", view.errors.length === 0, view.errors.slice(0, 3).join(" | "));
 }

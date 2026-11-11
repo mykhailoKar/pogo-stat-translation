@@ -18,6 +18,7 @@
 - [0007: Pull requests, a formatter, browser checks in CI and Dependabot](decisions/0007-team-workflow.md)
 - [0008: Categories that combine and leave out](decisions/0008-combined-categories.md)
 - [0009: Art from the games, on the owner's terms](decisions/0009-art-from-the-games.md)
+- [0010: The pager stays in place](decisions/0010-pager-stays-in-place.md)
 
 ## Generated reports
 

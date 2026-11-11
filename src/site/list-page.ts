@@ -2,6 +2,7 @@
 import {
   COLUMNS,
   PAGE_JUMP,
+  PAGE_SIZE,
   categoryStatus,
   excludeCategory,
   filterRows,
@@ -14,6 +15,7 @@ import {
   selectCategory,
   sortRows,
   stateFromParams,
+  widestPageLinks,
   type CategoryId,
   type FilterId,
   type ListRow,
@@ -44,6 +46,9 @@ const baseUrl = body.dataset.base ?? "/";
 
 let state: ListState = stateFromParams(new URLSearchParams(location.search));
 const open = new Set<string>();
+const rowById = new Map(rows.map((row) => [row.id, row]));
+/** The page on screen, so render() can tell when the page changes. */
+let shownPage = 0;
 
 const number = new Intl.NumberFormat("en");
 
@@ -116,24 +121,59 @@ function cutBadge(adjustment: number): string {
   return adjustment < 1 ? `<span class="badge" title="Includes GO's ×${adjustment} cut">Cut</span>` : "";
 }
 
-function rowHtml(row: ListRow): string {
-  const isOpen = open.has(row.id);
+/**
+ * A row's cells. The name and the types each keep to one line and end in "…" if they don't fit, so every row is as
+ * tall as the next and the pager stays in one place (#14). Opening a row shows them whole.
+ */
+function cellsHtml(row: ListRow, isOpen: boolean): string {
   const types = row.types.map(typeHtml).join(" ");
   const predicted = row.predicted
     ? `<span class="badge" title="Not in GO data yet; GO stats are predicted">Predicted</span>`
     : "";
-  const line = `<tr class="row" data-id="${row.id}">
-    <td class="col-dex">${row.dex}</td>
-    <th scope="row" class="col-name"><button type="button" class="name" aria-expanded="${isOpen}"><span class="chevron" aria-hidden="true"></span><span class="name-text">${escapeHtml(row.name)}</span></button><span class="types">${types}</span>${predicted}</th>
+  return `<td class="col-dex">${row.dex}</td>
+    <th scope="row" class="col-name"><div class="name-cell"><button type="button" class="name" aria-expanded="${isOpen}"><span class="chevron" aria-hidden="true"></span><span class="name-text">${escapeHtml(row.name)}</span></button><span class="tags"><span class="types">${types}</span>${predicted}</span></div></th>
     <td class="col-fit" data-label="GO Fit">${percent(row.goFit)}</td>
     <td data-label="Percentile">${row.percentile.toFixed(1)}</td>
     <td data-label="Attack Fit">${percent(row.attackFit)}</td>
     <td data-label="Defense Fit">${percent(row.defenseFit)}</td>
     <td data-label="Speed Fit">${percent(row.speedFit)}</td>
     <td data-label="L50 CP now">${number.format(row.cpNow)}${cutBadge(row.adjustment)}</td>
-    <td data-label="L50 CP ideal">${number.format(row.cpIdeal)}${cutBadge(row.idealAdjustment)}</td>
-  </tr>`;
+    <td data-label="L50 CP ideal">${number.format(row.cpIdeal)}${cutBadge(row.idealAdjustment)}</td>`;
+}
+
+function rowHtml(row: ListRow): string {
+  const isOpen = open.has(row.id);
+  const line = `<tr class="row${isOpen ? " open" : ""}" data-id="${row.id}">${cellsHtml(row, isOpen)}</tr>`;
   return isOpen ? line + detailHtml(row) : line;
+}
+
+/**
+ * Hidden copies of a row that fill a short page, such as the last page of a category, to the height of a full one.
+ * Every row is one line, so a copy of any row is exactly as tall as the rows it stands in for, in the table and as
+ * cards. They're hidden from screen readers and can't be clicked or focused.
+ */
+function fillerHtml(row: ListRow, count: number): string {
+  return `<tr class="row filler" aria-hidden="true">${cellsHtml(row, false)}</tr>`.repeat(count);
+}
+
+/**
+ * A name or types cut short by the row's one line get a tooltip with the whole text. Types left less room than one
+ * icon and its "…" are hidden rather than shown as a sliver.
+ */
+function fitNames(): void {
+  for (const tr of body.querySelectorAll<HTMLTableRowElement>("tr.row[data-id]")) {
+    const row = rowById.get(tr.dataset.id ?? "");
+    const cell = tr.querySelector<HTMLElement>(".name-cell");
+    const types = tr.querySelector<HTMLElement>(".types");
+    if (!row || !cell || !types) continue;
+    const cut = [...cell.querySelectorAll<HTMLElement>(".name-text, .types")].some(
+      (part) => part.scrollWidth > part.clientWidth,
+    );
+    if (cut) cell.title = `${row.name}: ${row.types.map(capitalize).join(", ")}`;
+    else cell.removeAttribute("title");
+    const room = types.clientWidth / parseFloat(getComputedStyle(types).fontSize);
+    types.classList.toggle("squeezed", types.scrollWidth > types.clientWidth && room < 2.5);
+  }
 }
 
 function renderHead(): void {
@@ -157,6 +197,13 @@ function pageLinkHtml(link: number | null, page: number): string {
   return `<li><button type="button" data-page="${link}" aria-label="Page ${link}"${current}>${link}</button></li>`;
 }
 
+/** A stand-in for a page link, as wide as the real one, for the hidden run that holds the pager's width. */
+function sizerLinkHtml(link: number | null): string {
+  return link === null
+    ? `<li class="gap">…</li>`
+    : `<li><button type="button" tabindex="-1" disabled>${link}</button></li>`;
+}
+
 /**
  * A Previous, Next, <5 or 5> button. `data-step` lets focus return to the same button once the pager is redrawn.
  * A jump shows symbols, so its name and its title spell out what it does.
@@ -174,9 +221,12 @@ function renderPager(page: number, pages: number): void {
       ${stepHtml("prev5", jumpPage(page, pages, -PAGE_JUMP), first, `&lt;${PAGE_JUMP}`, `Back ${PAGE_JUMP} pages`)}
       ${stepHtml("prev", page - 1, first, "Previous")}
     </div>
-    <ol class="pages">${pageLinks(page, pages)
-      .map((link) => pageLinkHtml(link, page))
-      .join("")}</ol>
+    <div class="pages-box">
+      <ol class="pages">${pageLinks(page, pages)
+        .map((link) => pageLinkHtml(link, page))
+        .join("")}</ol>
+      <ol class="pages-sizer" aria-hidden="true">${widestPageLinks(pages).map(sizerLinkHtml).join("")}</ol>
+    </div>
     <p class="page-status">Page ${page} of ${pages}</p>
     <div class="pager-group">
       ${stepHtml("next", page + 1, last, "Next")}
@@ -204,7 +254,13 @@ function render(): void {
   const visible = sortRows(filterRows(rows, state), state);
   const pages = pageCount(visible.length);
   state = { ...state, page: Math.min(state.page, pages) };
-  body.innerHTML = pageRows(visible, state.page).map(rowHtml).join("");
+  // Every page starts with its rows closed, so each one is as tall as the last and the pager stays put.
+  if (state.page !== shownPage) open.clear();
+  shownPage = state.page;
+  const shown = pageRows(visible, state.page);
+  const short = pages > 1 && shown[0] ? fillerHtml(shown[0], PAGE_SIZE - shown.length) : "";
+  body.innerHTML = shown.map(rowHtml).join("") + short;
+  fitNames();
   empty.hidden = visible.length > 0;
   count.textContent = `${number.format(visible.length)} ${visible.length === 1 ? "form" : "forms"}`;
   renderHead();
@@ -219,7 +275,7 @@ function update(next: Partial<ListState>): void {
 }
 
 function toggle(id: string, tr: HTMLTableRowElement): void {
-  const row = rows.find((candidate) => candidate.id === id);
+  const row = rowById.get(id);
   if (!row) return;
   const button = tr.querySelector<HTMLButtonElement>("button.name");
   if (open.delete(id)) {
@@ -230,6 +286,8 @@ function toggle(id: string, tr: HTMLTableRowElement): void {
     tr.insertAdjacentHTML("afterend", detailHtml(row));
     button?.setAttribute("aria-expanded", "true");
   }
+  tr.classList.toggle("open", open.has(id));
+  fitNames();
 }
 
 /** The categories just before the latest single click, so a double-click can undo that click before it acts. */
@@ -278,6 +336,13 @@ pager.addEventListener("click", (event) => {
     : pager.querySelector<HTMLButtonElement>('[aria-current="page"]');
   (same ?? pager.querySelector<HTMLButtonElement>("button:not(:disabled)"))?.focus({ preventScroll: true });
   if (table.getBoundingClientRect().top < 0) table.scrollIntoView();
+});
+
+// A new width can cut a name that fit, or give a cut one room.
+let fitting = 0;
+window.addEventListener("resize", () => {
+  cancelAnimationFrame(fitting);
+  fitting = requestAnimationFrame(fitNames);
 });
 
 window.addEventListener("popstate", () => {
