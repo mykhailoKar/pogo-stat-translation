@@ -20,6 +20,7 @@ import {
   selectCategory,
   sortRows,
   stateFromParams,
+  widestPageLinks,
   type ListRow,
   type ListState,
 } from "../src/lib/list.ts";
@@ -348,6 +349,31 @@ describe("pages", () => {
     assert.deepEqual(pageLinks(1, 2), [1, 2]);
     assert.deepEqual(pageLinks(2, 3), [1, 2, 3]);
     assert.deepEqual(pageLinks(3, 5), [1, 2, 3, 4, 5]);
+  });
+
+  it("finds the widest run of links three pages from the end", () => {
+    assert.deepEqual(widestPageLinks(125), [1, null, 121, 122, 123, 124, 125]);
+    assert.deepEqual(widestPageLinks(7), [1, 2, 3, 4, 5, 6, 7]);
+    assert.deepEqual(widestPageLinks(2), [1, 2]);
+    assert.deepEqual(widestPageLinks(1), [1]);
+  });
+
+  // The pager's buttons are 42px at least, with 22px of padding and border around the digits, and a gap is 18px.
+  // Digits from 9px wide (Segoe UI) to 11px (DejaVu Sans) cover the fonts the site meets.
+  it("is at least as wide as every other page's links, in narrow and wide digits", () => {
+    for (const digit of [9, 11]) {
+      const width = (links: (number | null)[]) =>
+        links.reduce<number>(
+          (sum, link) => sum + (link === null ? 18 : Math.max(42, 22 + digit * String(link).length)),
+          0,
+        ) +
+        6 * (links.length - 1);
+      for (let pages = 1; pages <= 1000; pages++) {
+        const widest = width(widestPageLinks(pages));
+        for (let page = 1; page <= pages; page++)
+          assert.ok(width(pageLinks(page, pages)) <= widest, `page ${page} of ${pages}, ${digit}px digits`);
+      }
+    }
   });
 });
 

@@ -290,6 +290,15 @@ export function pageLinks(page: number, pages: number): (number | null)[] {
   return links;
 }
 
+/**
+ * The widest run of links a list of `pages` pages can show: three pages from the end, as in 1 … 121 122 123 124 125.
+ * It has the most links, the fewest gaps and the longest numbers. The pager keeps room for it on every page, so the
+ * buttons either side of the numbers don't move as they change.
+ */
+export function widestPageLinks(pages: number): (number | null)[] {
+  return pageLinks(Math.max(1, pages - 3), pages);
+}
+
 function firstDirection(key: SortKey): Direction {
   return COLUMNS.find((column) => column.key === key)?.first ?? "desc";
 }

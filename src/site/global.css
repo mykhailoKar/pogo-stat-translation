@@ -445,6 +445,7 @@ th[aria-sort="descending"] .arrow::after {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: none;
@@ -469,11 +470,43 @@ th[aria-sort="descending"] .arrow::after {
   transform: translateY(-0.2em) rotate(45deg);
 }
 
+/* The name and the types each keep to one line, ending in "…" if they don't fit, so every row has the same height
+   and the pager stays in one place from page to page. The script gives a cut name a tooltip, and opening the row
+   shows it whole. */
+.name-text,
 .types {
-  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row.open .name-text,
+.row.open .types {
+  white-space: normal;
+}
+
+/* The types and any Predicted label, on the line under the name. The types give way first, so the label shows. */
+.tags {
+  display: flex;
+  align-items: baseline;
   padding-left: calc(0.45em + 6px);
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.tags .badge {
+  flex: none;
+}
+
+/* Too little room for one icon and its "…". Screen readers still read the types, and the tooltip names them. */
+.types.squeezed {
+  opacity: 0;
+}
+
+/* Fill a short page to the height of a full one. See fillerHtml in list-page.ts. */
+.list > tbody > tr.filler {
+  visibility: hidden;
 }
 
 .type {
@@ -511,10 +544,6 @@ th[aria-sort="descending"] .arrow::after {
   font-weight: 600;
   line-height: 1.5;
   vertical-align: 1px;
-}
-
-.col-name .badge {
-  margin-left: calc(0.45em + 6px);
 }
 
 .list td.col-fit {
@@ -629,15 +658,28 @@ th[aria-sort="descending"] .arrow::after {
   gap: 6px;
 }
 
-.pages {
+/* The page numbers sit over a hidden copy of the widest run this list can show, such as 1 … 121 122 123 124 125, so
+   the pager is as wide on every page and the buttons either side of the numbers don't move as they change. */
+.pages-box {
+  display: grid;
+}
+
+.pages,
+.pages-sizer {
   display: flex;
+  grid-area: 1 / 1;
+  justify-content: center;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.pages .gap {
+.pages-sizer {
+  visibility: hidden;
+}
+
+.pager .gap {
   align-self: center;
   width: 18px;
   color: var(--muted);
@@ -661,7 +703,7 @@ th[aria-sort="descending"] .arrow::after {
     row-gap: 8px;
   }
 
-  .pages {
+  .pages-box {
     display: none;
   }
 
@@ -825,9 +867,24 @@ th[aria-sort="descending"] .arrow::after {
    keep theirs: any narrower, and "Defense Fit" wraps in wider fonts such as Linux's DejaVu Sans. 11% is the least
    that holds an "11,467 Cut" in those fonts, which needs 6ch + 2.4rem + 16px. */
 @media (min-width: 1100px) {
-  .types {
-    display: inline;
+  .name-cell {
+    display: flex;
+    align-items: baseline;
+  }
+
+  /* The name keeps its room, and the types give way to it. */
+  .name {
+    flex: none;
+  }
+
+  .tags {
+    min-width: 0;
+    overflow: hidden;
     padding-left: 8px;
+  }
+
+  .row.open .name-cell {
+    flex-wrap: wrap;
   }
 
   .list .col-cpNow,
