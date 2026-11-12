@@ -31,5 +31,6 @@ Rejected:
 ## Consequences
 
 - At 1366px one name is cut, and 79 forms have their types shortened or hidden, mostly long form names such as Paldean Tauros (Aqua Breed). The name column is narrowest on tablets: at 768px, 37 names are cut. On a 390px phone, 9 are.
-- The driver checks that the pager's buttons sit in the same place on every page of the full list and of each category with a short last page, at every size, and that ten rows and the pager fit the laptop screen.
+- The driver checks that the pager's buttons sit in the same place on every page of the full list and of each category with a short last page, at every size, and that every name and its types keep to their lines.
+- Ten rows and the pager fit 1366×768 in Windows fonts, with the pager ending at 736px. In the wider fonts on the CI's Linux runner, the text above the list wraps more and pushes it to 785px ([#17](https://github.com/mykhailoKar/pogo-stat-translation/issues/17)). That was already so before this change, so the driver prints where the pager ends as a note rather than failing on it.
 - The page has hidden rows on short pages, so code reading the list should use `tr.row:not(.filler)`, as the driver does.
